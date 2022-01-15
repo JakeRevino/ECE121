@@ -8,8 +8,10 @@
 
 
 #include <stdio.h> 
-#include <BOARD.h>
-#include "xc.h"
+#include <stdlib.h>
+#include <xc.h>
+#include "BOARD.h"
+
 
 // define LED's
 #define LED1 TRISEbits.RE7
@@ -27,14 +29,41 @@
 #define BTN3 PORTDbits.RD6
 #define BTN4 PORTDbits.RD7
 
-int main(void) {
+#define PART1_buttons
+#define PART2_leds
+
+#define NOPS_FOR_5MS 5e-3
+
+void main(void) {
     BOARD_Init();
-    TRISE = 0x00;            // setting TRISE as output
-    LATE = 0b11111111;       // turns on LEDs
-    
-    PORTD = 0x11;            // setting PORTD as input
-    while (BTN1) {
-        PORTD = 0x00;
-        LATE = 0b11111110;
+    TRISE = 0x00; // setting port E as output
+    TRISD = 0xff; // setting port D as input
+    TRISF = 0xff; // setting port F as input
+
+    int i;
+    for (i = 0; i < NOPS_FOR_5MS; i++) {
+        asm(" nop ");
+
     }
+#ifdef PART1_buttons 
+    while (1) {
+
+        if ((BTN1 == 1) || (BTN2 == 1) || (BTN3 == 1) || BTN4 == 1) {
+            // TRISF = 0x04;
+            LATE = 0b10100101; // only 4 LEDs will turn on 
+        } else
+            LATE = 0b00000000; // else all LEDs are off
+    }
+#endif
+
+#ifdef PART2_leds
+  /*  while (1) {
+
+
+    } */
+#endif
+
+
+    while (1);
+    BOARD_End();
 }
