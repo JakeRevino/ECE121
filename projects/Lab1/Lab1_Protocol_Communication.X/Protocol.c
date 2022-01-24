@@ -4,16 +4,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//#define MAIN_TEST
+#define MAIN_TEST
 #define Baud_Gen 21
 
 int Protocol_Init(void) {
     // Special Function Registers (SFR)
-    U1MODE = 0x8000; // Enable UART for 8-bit data
-    
-    U1BRG = Baud_Gen;
-    IFS0 = 0; // clear flags for UART1
-    IFS1 = 0; // clear flags to be safe
+    U1MODE = 0; // Enable UART for 8-bit data
+
+    //U1BRG = Baud_Gen;
+    IFS0bits.U1TXIF = 0; // clear flags for UART1
+    //IFS1 = 0; // clear flags to be safe
     U1STA = 0; // clear control registers
     U1TXREG = 0; // init Tx reg
     U1RXREG = 0; // init Rx reg
@@ -28,7 +28,7 @@ int Protocol_Init(void) {
     U1STAbits.UTXEN = 1; // enable Tx bits
     U1STAbits.URXEN = 1; // enable Rx bits
     U1MODEbits.ON = 1; // Turn UART on
-    
+
     /*
      
      Will need to do more stuff with the interrupts
@@ -40,7 +40,11 @@ int Protocol_Init(void) {
 #ifdef MAIN_TEST
 
 void main(void) {
-
+    BOARD_Init();
+    Protocol_Init();
+    U1TXREG = 'J';
+    while(1);
+    BOARD_End();
 }
 
 #endif
