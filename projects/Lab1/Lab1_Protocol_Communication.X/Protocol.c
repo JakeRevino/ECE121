@@ -5,10 +5,13 @@
 #include <stdlib.h>
 
 //#define MAIN_TEST
-#define UART_TEST
+//#define UART_TEST
 #define BUFFER_TEST
 #define Baud_Gen 21
-#define MAX_BUFFER_LENGTH 16
+#define MAX_BUFFER_LENGTH 4
+
+int checkBuff_isFull(void);
+int checkBuff_isEmpty(void);
 
 int Protocol_Init(void) {
 
@@ -83,24 +86,57 @@ int Protocol_Init(void) {
 
 }
 
-static struct circBuff{
-    unsigned char buffer[MAX_BUFFER_LENGTH];
-    int head;
-    int tail;
+static struct {
+    unsigned char data[MAX_BUFFER_LENGTH];
+    unsigned int head;
+    unsigned int tail;
 
-};
+}CircleBuffer;
+
+//CircleBuffer circleBuffer;
+
+void init_buff(void) {   
+    //CircleBuffer = {.head = 0, .tail = 0};
+    CircleBuffer.head = 0;
+    CircleBuffer.tail = 0;
+}
 
 void enqueue_CB(unsigned char input) {
-    circBuff.head = 0;
-    circBuff.tail = 0;
-    circBuff.buffer[TAIL] = input;
-    circBuff.tail = (circBuff.tail + 1) % MAX_BUFFER_LENGTH;
+    if (!checkBuff_isFull()) {
+    CircleBuffer.data[CircleBuffer.tail] = input;
+    CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH;
+    }
+}
 
+char dequeue_CB(void) {
+    if (checkBuff_isEmpty() == 0) {
+    char temp_placeHolder;
+    temp_placeHolder = CircleBuffer.data[CircleBuffer.head];
+    CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
+    return temp_placeHolder;
+    }
+}
+
+int checkBuff_isEmpty(void) {
+    if (CircleBuffer.head == CircleBuffer.tail) {  // if head == tail then its empty
+        return 1;
+    }
+    else
+        return 0;
+}
+int checkBuff_isFull(void) {
+    if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
+    //    int check_full;
+//    check_full = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH;
+//    if (check_full == CircleBuffer.head) {
+        return 1;
+    }
+    else
+        return 0;
 }
 
 void main(void) {
-
-
+    
 #ifdef UART_TEST 
     BOARD_Init();
     Protocol_Init();
@@ -108,12 +144,21 @@ void main(void) {
         U1TXREG = 'J';
     }
     //while(1);
-    BOARD_End();
+    //BOARD_End();
 #endif
     
 #ifdef BUFFER_TEST
-    unsigned char test_char = 'P';
-    struct circBuff TX_Buff;
+    unsigned char test_char[] = {'P', 'E', 'N'};
+    init_buff();
+    //struct CircleBuffer somethingElse;
+    enqueue_CB(test_char[0]);
+    enqueue_CB(test_char[1]);
+    //dequeue_CB();
+    enqueue_CB(test_char[2]);
+    //enqueue_CB(test_char[3]);
+   // enqueue_CB(test_char[4]);
+    int full_or_nah = checkBuff_isFull();
+    
     
     //TX_Buff.buffer
   
@@ -121,4 +166,6 @@ void main(void) {
     
     
 #endif
+    //while(1);
+   // BOARD_End();
 }
