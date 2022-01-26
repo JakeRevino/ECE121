@@ -5,13 +5,15 @@
 #include <stdlib.h>
 
 //#define MAIN_TEST
-//#define UART_TEST
+#define UART_TEST
 #define BUFFER_TEST
+//#define PUTCHAR_TEST
 #define Baud_Gen 21
 #define MAX_BUFFER_LENGTH 4
+char full_msg = 'F';
 
-int checkBuff_isFull(void);
-int checkBuff_isEmpty(void);
+//int checkBuff_isFull(void);
+//int checkBuff_isEmpty(void);
 
 int Protocol_Init(void) {
 
@@ -100,16 +102,36 @@ void init_buff(void) {
     CircleBuffer.head = 0;
     CircleBuffer.tail = 0;
 }
+char Protocol_IsMessageAvailable(void) {
+    if (CircleBuffer.head == CircleBuffer.tail) {  // if head == tail then its empty
+        return TRUE;
+    }
+    else
+        return FALSE;
+}
+char Protocol_IsQueueFull(void) {
+    if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
+        return TRUE;
+    }
+    else
+        return FALSE;
+}
 
 void enqueue_CB(unsigned char input) {
-    if (!checkBuff_isFull()) {
-    CircleBuffer.data[CircleBuffer.tail] = input;
-    CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH;
+    if (CircleBuffer.head == (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH) { // this is checking if its full
+        return;
+    }
+    else {
+    CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
+    CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
     }
 }
 
 char dequeue_CB(void) {
-    if (checkBuff_isEmpty() == 0) {
+    if (CircleBuffer.head == CircleBuffer.tail) {
+        return full_msg;
+    }
+    else {
     char temp_placeHolder;
     temp_placeHolder = CircleBuffer.data[CircleBuffer.head];
     CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
@@ -117,55 +139,61 @@ char dequeue_CB(void) {
     }
 }
 
-int checkBuff_isEmpty(void) {
-    if (CircleBuffer.head == CircleBuffer.tail) {  // if head == tail then its empty
-        return 1;
+/**
+ * @Function char PutChar(char ch)
+ * @param ch, new char to add to the circular buffer
+ * @return SUCCESS or ERROR
+ * @brief adds to circular buffer if space exists, if not returns ERROR
+ * @author mdunne */
+int PutChar(char ch) {
+    if (Protocol_IsQueueFull() == 1) {
+        return ERROR;
     }
-    else
-        return 0;
-}
-int checkBuff_isFull(void) {
-    if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
-    //    int check_full;
-//    check_full = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH;
-//    if (check_full == CircleBuffer.head) {
-        return 1;
+    else {
+       enqueue_CB(ch);
+       return SUCCESS;
     }
-    else
-        return 0;
+
 }
+
 
 void main(void) {
     
 #ifdef UART_TEST 
     BOARD_Init();
     Protocol_Init();
-    while (1) {
-        U1TXREG = 'J';
-    }
+//    while (1) {
+//        U1TXREG = 'J';
+//    }
     //while(1);
     //BOARD_End();
-#endif
+//#endif
     
 #ifdef BUFFER_TEST
-    unsigned char test_char[] = {'P', 'E', 'N'};
+    unsigned char test_char[] = {'P', 'E'};
     init_buff();
     //struct CircleBuffer somethingElse;
     enqueue_CB(test_char[0]);
     enqueue_CB(test_char[1]);
+    char char_to_put = 'K';
+    U1TXREG = PutChar(char_to_put);
     //dequeue_CB();
-    enqueue_CB(test_char[2]);
+    //enqueue_CB(test_char[2]);
+    dequeue_CB();
+    dequeue_CB();
     //enqueue_CB(test_char[3]);
    // enqueue_CB(test_char[4]);
-    int full_or_nah = checkBuff_isFull();
+    //int full_or_nah = checkBuff_isFull();
     
-    
+#endif  
     //TX_Buff.buffer
   
     /*write a test for ur buffer*/
     
     
 #endif
-    //while(1);
-   // BOARD_End();
+    while(1);
+    BOARD_End();
 }
+
+
