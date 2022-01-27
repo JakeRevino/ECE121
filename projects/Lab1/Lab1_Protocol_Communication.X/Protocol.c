@@ -5,15 +5,13 @@
 #include <stdlib.h>
 
 //#define MAIN_TEST
+#define Fpb 40000000
+#define desired_baud 115200
 #define UART_TEST
 #define BUFFER_TEST
-//#define PUTCHAR_TEST
-#define Baud_Gen 21
-#define MAX_BUFFER_LENGTH 4
+#define PUTCHAR_TEST
+#define MAX_BUFFER_LENGTH 128
 char full_msg = 'F';
-
-//int checkBuff_isFull(void);
-//int checkBuff_isEmpty(void);
 
 int Protocol_Init(void) {
 
@@ -53,37 +51,29 @@ int Protocol_Init(void) {
      *                   URXDA - RX buffer data status
      */
 
-    //  U1BRG = 21; // baud rate gen value of 21 gives Baud Rate = 115k
-
-    // INTERRUPTS */
-
-
-    // Special Function Registers (SFR)
     U1MODE = 1; // Enable UART for 8-bit data
-
-    //U1BRG = Baud_Gen;
+    //IPC6bits.U1IP = 4; // sets interrupt priority
     IFS0bits.U1TXIF = 0; // clear flags for UART1
-    //IFS1 = 0; // clear flags to be safe
     U1STA = 0; // clear control registers
-    U1TXREG = 0; // init Tx reg
-    U1RXREG = 0; // init Rx reg
-    U1BRG = 21; // baud rate gen value of 21 gives Baud Rate = 115k
-    // End SFR configuration
+    U1BRG = ((Fpb / desired_baud) / 16) - 1; // baud rate gen value of 21 gives Baud Rate = 115k
+
+
+    IEC0bits.U1RXIE = 1; // enable RX interrupt
+    IEC0bits.U1TXIE = 1; // enable TX interrupt
+
+    //IFS1 = 0; // clear flags to be safe
+
+    U1MODEbits.UEN = 2;
+    U1STAbits.UTXISEL0 = 1;
+    U1STAbits.UTXISEL1 = 0;
 
     // Configure to 8-N-1
     U1MODEbits.PDSEL = 00; // sets 8-data and no parity
+    //U1MODEbits.PDSEL1 = 0;
     U1MODEbits.STSEL = 0; // sets 1 stop bit
-
-    // Enable Tx, Rx, and UART1
     U1STAbits.UTXEN = 1; // enable Tx bits
     U1STAbits.URXEN = 1; // enable Rx bits
     U1MODEbits.ON = 1; // Turn UART on
-
-    // #define interrupt_flag IFS1.U1TXIF
-
-
-    //  Will need to do more stuff with the interrupts
-
 
 
 }
@@ -93,49 +83,47 @@ static struct {
     unsigned int head;
     unsigned int tail;
 
-}CircleBuffer;
+} CircleBuffer;
 
 //CircleBuffer circleBuffer;
 
-void init_buff(void) {   
+void init_buff(void) {
     //CircleBuffer = {.head = 0, .tail = 0};
     CircleBuffer.head = 0;
     CircleBuffer.tail = 0;
 }
+
 char Protocol_IsMessageAvailable(void) {
-    if (CircleBuffer.head == CircleBuffer.tail) {  // if head == tail then its empty
+    if (CircleBuffer.head == CircleBuffer.tail) { // if head == tail then its empty
         return TRUE;
-    }
-    else
+    } else
         return FALSE;
 }
+
 char Protocol_IsQueueFull(void) {
     if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
         return TRUE;
-    }
-    else
+    } else
         return FALSE;
 }
 
 void enqueue_CB(unsigned char input) {
     if (CircleBuffer.head == (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH) { // this is checking if its full
         return;
-    }
-    else {
-    CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
-    CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
+    } else {
+        CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
+        CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
     }
 }
 
 char dequeue_CB(void) {
     if (CircleBuffer.head == CircleBuffer.tail) {
         return full_msg;
-    }
-    else {
-    char temp_placeHolder;
-    temp_placeHolder = CircleBuffer.data[CircleBuffer.head];
-    CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
-    return temp_placeHolder;
+    } else {
+        char temp_placeHolder;
+        temp_placeHolder = CircleBuffer.data[CircleBuffer.head];
+        CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
+        return temp_placeHolder;
     }
 }
 
@@ -146,54 +134,95 @@ char dequeue_CB(void) {
  * @brief adds to circular buffer if space exists, if not returns ERROR
  * @author mdunne */
 int PutChar(char ch) {
-    if (Protocol_IsQueueFull() == 1) {
+    if (Protocol_IsQueueFull() == TRUE) {
         return ERROR;
-    }
-    else {
-       enqueue_CB(ch);
-       return SUCCESS;
+    } else {
+        U1TXREG = ch;
+        return SUCCESS;
     }
 
 }
 
+void __ISR(_UART1_VECTOR)IntUart1Handler(void);
 
-void main(void) {
-    
-#ifdef UART_TEST 
+
+#ifdef TESTHARNESS
+
+int main(void) {
+    char test_char[] = "JAKE";
     BOARD_Init();
     Protocol_Init();
-//    while (1) {
-//        U1TXREG = 'J';
-//    }
-    //while(1);
-    //BOARD_End();
-//#endif
-    
-#ifdef BUFFER_TEST
-    unsigned char test_char[] = {'P', 'E'};
     init_buff();
-    //struct CircleBuffer somethingElse;
-    enqueue_CB(test_char[0]);
-    enqueue_CB(test_char[1]);
-    char char_to_put = 'K';
-    U1TXREG = PutChar(char_to_put);
-    //dequeue_CB();
-    //enqueue_CB(test_char[2]);
-    dequeue_CB();
-    dequeue_CB();
-    //enqueue_CB(test_char[3]);
-   // enqueue_CB(test_char[4]);
-    //int full_or_nah = checkBuff_isFull();
-    
-#endif  
-    //TX_Buff.buffer
-  
-    /*write a test for ur buffer*/
-    
+
+#ifdef PUTCHAR_TEST
+    int i = 0;
+    while (i <= sizeof (test_char)) {
+        PutChar(test_char[i]);
+        i++;
+    }
     
 #endif
-    while(1);
+    
+    while (1);
     BOARD_End();
+    return 0;
 }
+#endif
+//#ifdef UART_TEST 
+//    while (1) {
+//    BOARD_Init();
+//    Protocol_Init();
+////    while (1) {
+////        U1TXREG = 'J';
+////    }
+//    //while(1);
+//    //BOARD_End();
+////#endif
+//    
+//#ifdef BUFFER_TEST
+//    unsigned char test_char[] = "PENIS ";
+//    init_buff();
+//    int length = sizeof(test_char);
+//    int i = 0;
+//    PutChar('H');
+//   /* while (i < length -1) {
+//        if (U1STAbits.TRMT) {
+//            U1TXREG = PutChar(test_char[i]);
+//            i++;
+//        
+//        
+//        }
+//    */ 
+//    
+//    
+//    //for (int i = 0; test_char[i] != EOF; i++) {
+//    //enqueue_CB(test_char[i]);
+//    
+//    
+//    //char char_to_put = 'K';
+//    
+//   // U1TXREG = (test_char[i]);
+//    
+//    //U1TXREG = test_char[i];
+//    }//dequeue_CB();
+//    //enqueue_CB(test_char[2]);
+//    dequeue_CB();
+//    dequeue_CB();
+//    //enqueue_CB(test_char[3]);
+//   // enqueue_CB(test_char[4]);
+//    //int full_or_nah = checkBuff_isFull();
+//    
+//#endif  
+//    //TX_Buff.buffer
+//  
+//    /*write a test for ur buffer*/
+//    
+//    
+//#endif
+//        BOARD_End();
+//
+//    
+//}
+
 
 
