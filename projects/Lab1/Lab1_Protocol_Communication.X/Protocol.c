@@ -11,8 +11,18 @@
 #define UART_TEST
 #define BUFFER_TEST
 #define PUTCHAR_TEST
-#define MAX_BUFFER_LENGTH 128
-char full_msg = 'F';
+#define MAX_BUFFER_LENGTH 640
+
+// define LED's
+#define LED1 PORTEbits.RE7
+#define LED2 PORTEbits.RE6
+#define LED3 PORTEbits.RE5
+#define LED4 PORTEbits.RE4
+#define LED5 PORTEbits.RE3  
+#define LED6 PORTEbits.RE2
+#define LED7 PORTEbits.RE1
+#define LED8 PORTEbits.RE0
+//char full_msg = 'F';
 
 int Protocol_Init(void) {
 
@@ -66,13 +76,7 @@ int Protocol_Init(void) {
     U1STA = 0; // clear control registers
     U1BRG = ((Fpb / desired_baud) / 16) - 1; // baud rate gen value of 21 gives Baud Rate = 115k
 
-
-    //IEC0bits.U1RXIE = 1; // enable RX interrupt
-    //IEC0bits.U1TXIE = 1; // enable TX interrupt
-
-    //IFS1 = 0; // clear flags to be safe
-
-    U1MODEbits.UEN = 2;
+    U1MODEbits.UEN = 0;
     U1STAbits.UTXISEL0 = 1;
     U1STAbits.UTXISEL1 = 0;
 
@@ -87,63 +91,70 @@ int Protocol_Init(void) {
 
 }
 
-typedef struct {
-    unsigned char data[MAX_BUFFER_LENGTH];
-    unsigned int head; // oldest data element
-    unsigned int tail; // next available free space
-    unsigned int size; // number of elements in buffer
+static struct {
+     char data[MAX_BUFFER_LENGTH];
+     int head; // oldest data element
+     int tail; // next available free space
+     int size; // number of elements in buffer
 
 } CircleBuffer;
 
+void init_buff(void);
+char check_EmptyBuff(void);
+char check_FullBuff(void);
+void enqueue_CB(char input);
+char dequeue_CB(void);
+
 //CircleBuffer circleBuffer;
 
-void init_buff(CircleBuffer * q) {
-    unsigned int i;
-    for (i = 0; i < MAX_BUFFER_LENGTH; i++) {
-        q->data[i] = 0;
-        q->head = 0;
-        q->tail = 0;
+void init_buff(void) {
+    //CircleBuffer * q;
+    // unsigned int i;
+    //for (i = 0; i < MAX_BUFFER_LENGTH; i++) {
+    //CircleBuffer.data[i] = 0;
+    CircleBuffer.head = 0;
+    CircleBuffer.tail = 0;
+    CircleBuffer.size = 0;
+    // }
+}
+
+char check_EmptyBuff(void) {
+    if (CircleBuffer.head == CircleBuffer.tail) { // if head == tail then its empty
+        return TRUE;
     }
+    else
+        return FALSE;
 }
 
-int check_EmptyBuff(CircleBuffer * q) {
-    //if (CircleBuffer.head == CircleBuffer.tail) { // if head == tail then its empty
-    return q->size == 0;
+char check_FullBuff(void) {
+    if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
+        return TRUE;
+        } else
+           return FALSE;
+    }
+
+
+void enqueue_CB(char input) { // write to CB
+    if (!check_FullBuff()) {
+        CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
+        CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
+
+       
+    }
+    
 }
 
-int check_FullBuff(CircleBuffer * q) {
-    //if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
-    return q->size == MAX_BUFFER_LENGTH;
-    //} else
-    //   return FALSE;
-}
+char dequeue_CB(void) { // read from CB
+    char temp;
+    if (!check_EmptyBuff()) {
+        temp = CircleBuffer.data[CircleBuffer.head];
+        // CircleBuffer.data[CircleBuffer.head++] = 0;
+        CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
+        //CircleBuffer.head %= MAX_BUFFER_LENGTH;
+        //CircleBuffer.size--;
+        return temp;
 
-int enqueue_CB(CircleBuffer * q, unsigned char d) { // write to CB
-    if (!check_FullBuff(q)) {
-        q->data[q->tail++] = d;
-        q->tail %= MAX_BUFFER_LENGTH;
-        q->size++;
-        return 1; // success
-    } else
-        return 0; // fail
 
-    /*  if (CircleBuffer.head == (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH) { // this is checking if its full
-          return;
-      } else {
-          CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
-          CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
-      }*/
-}
-
-unsigned char dequeue_CB(CircleBuffer * q) { // read from CB
-    unsigned char temp = 0;
-    if (!check_EmptyBuff(q)) {
-        temp = q->data[q->head];
-        q->data[q->head++] = 0;
-        q->head %= MAX_BUFFER_LENGTH;
-        q->size--;
-        
-        
         /* if (CircleBuffer.head == CircleBuffer.tail - 1) {
              return full_msg;
          } else {
@@ -153,21 +164,24 @@ unsigned char dequeue_CB(CircleBuffer * q) { // read from CB
              return temp_placeHolder;
          } */
     }
-    return temp;
+    
 }
 
 int PutChar(char ch) {
-    if (check_FullBuff()) {
-        return ERROR;
-    } else {
-        U1TXREG = ch;
-        //enqueue_CB(ch);
+    if (!check_FullBuff()) {
+        enqueue_CB(ch);
+        IFS0bits.U1TXIF = 1;
         return SUCCESS;
-    }
+
+    } else
+        return ERROR;
 
 }
 
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
+    U1TXREG = dequeue_CB();
+    PORTE = 0b11111111;
+    IFS0bits.U1TXIF = 0;
 
 
 
@@ -177,21 +191,27 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main(void) {
-    char test_char[] = "JAKE";
+    char test_char[] = " JAKE,_FUCK";
     BOARD_Init();
+    // TRISE = 0x00; // setting port E as output
     Protocol_Init();
+    //CircleBuffer TX_buff;
     init_buff();
 
 #ifdef PUTCHAR_TEST
-    int i = 0;
-    while (i <= sizeof (test_char)) {
+    char i;
+    while (1) {
+    for (i = 1; i != '\0'; i++) {
         //if (IFS0bits.U1TXIF == 1)
 
         PutChar(test_char[i]);
-        i++;
-        if (U1STAbits.OERR) U1STAbits.OERR = 0; // reset overflow error
-        if (U1STAbits.PERR) U1STAbits.PERR = 0; // reset parity error
-        if (U1STAbits.FERR) U1STAbits.FERR = 0; // reset framing error
+        // PORTE = 0x11111111;
+       
+        //        if (U1STAbits.OERR) U1STAbits.OERR = 0; // reset overflow error
+        //        if (U1STAbits.PERR) U1STAbits.PERR = 0; // reset parity error
+        //        if (U1STAbits.FERR) U1STAbits.FERR = 0; // reset framing error
+    }
+    //IFS0bits.U1TXIF = 1;
     }
 
 #endif
