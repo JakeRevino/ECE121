@@ -10,26 +10,14 @@
 #define desired_baud 115200
 #define BaudRate ((Fpb / desired_baud) / 16) - 1; // baud rate gen value of 21 gives Baud Rate = 115k
 #define UART_TEST
-//#define putCharFlag
+#define RXTEMP
+#define ECHO_TEST
 #define BUFFER_TEST
 #define PUTCHAR_TEST
 #define MAX_BUFFER_LENGTH 32
 //#define TESTHARNESS
+char RXVAR;
 
-//#define LATEon LATE = 0x01
-
-// define LED's
-
-/*#define LED1 PORTEbits.RE7
-#define LED2 PORTEbits.RE6
-#define LED3 PORTEbits.RE5
-#define LED4 PORTEbits.RE4
-#define LED5 PORTEbits.RE3  
-#define LED6 PORTEbits.RE2
-#define LED7 PORTEbits.RE1
-#define LED8 PORTEbits.RE0
-//char full_msg = 'F';
- */
 int Protocol_Init(void) {
 
 
@@ -50,20 +38,21 @@ int Protocol_Init(void) {
     U1MODEbits.PDSEL0 = 0;
     U1MODEbits.PDSEL1 = 0; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
-    U1MODEbits.UEN = 2;
-    //U1STAbits.UTXISEL = 0b10;
-    // U1STAbits.URXISEL = 0b11;
+    U1MODEbits.UEN = 2; // enable UART
 
-    // Configure to 8-N-1
-    IPC6bits.U1IP = 4;
-    IPC6bits.U1IS = 0;
-
+    IPC6bits.U1IP = 4; // Interrupt protocol priority
+    IPC6bits.U1IS = 0; // Interrupt sub-protocol priority
 
     IEC0bits.U1TXIE = 1;
     U1STAbits.UTXISEL0 = 0;
     U1STAbits.UTXISEL1 = 1;
     U1STAbits.UTXEN = 1;
-    //U1STAbits.URXEN = 1; // enable Rx bits
+
+    IEC0bits.U1RXIE = 1;
+    U1STAbits.URXISEL0 = 0;
+    U1STAbits.URXISEL1 = 0;
+    U1STAbits.URXEN = 1;
+    
     U1MODEbits.ON = 1; // Turn UART on
 
 
@@ -77,6 +66,7 @@ static struct {
     int size; // number of elements in buffer
     int putCharFlag;
     int collision;
+    //char RXVAR;
 
 } CircleBuffer;
 
@@ -92,6 +82,7 @@ void init_buff(void) { // init the buffer
     CircleBuffer.tail = 0; // set tail to 0
     // CircleBuffer.size = 0; IDK if I need this
     CircleBuffer.putCharFlag = 0;
+    //CircleBuffer.RXVAR = 0;
 
 }
 
@@ -131,14 +122,12 @@ char dequeue_CB(void) { // read from CB
 
 int PutChar(char ch) {
     if (!check_FullBuff()) { // check if the buffer is full
-    CircleBuffer.putCharFlag = 1;
+        CircleBuffer.putCharFlag = 1;
 
-    
         enqueue_CB(ch); // put the char on the buffer
 
     }
     CircleBuffer.putCharFlag = 0;
-
     if ((U1STAbits.TRMT == 1) /*|| (CircleBuffer.collision == 1)*/) {
         //CircleBuffer.collision = 0;
         IFS0bits.U1TXIF = 1;
@@ -154,9 +143,16 @@ int PutChar(char ch) {
 
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
+    if (IFS0bits.U1RXIF == 1) {
+      //  RXVAR = U1RXREG;
+        IFS0bits.U1RXIF = 0;
+    
+    }
+    
     if (IFS0bits.U1TXIF == 1) {
 
         if (CircleBuffer.putCharFlag == 0) {
+
             U1TXREG = dequeue_CB(); // value from CB goes into TX reg
             IFS0bits.U1TXIF = 0;
         }
@@ -171,24 +167,45 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-    char test_char[] = "Alas! I think this is finally fookin workin!!! BITCH";
+    
+    char test_char[] = "Here we - HERE WE - HERE WE FUCKING GOOO!\n ";
+    
+    //char test_RXcopy[] = test_char;
     BOARD_Init();
     Protocol_Init();
     init_buff();
-    //    PORTE = 0b11111111;
-    //    LATEon;
-
 #ifdef PUTCHAR_TEST
     int i = 0;
     // writeUART(test_char);
     while (i < (sizeof test_char) - 1) {
-        // enqueue_CB(test_char);
+         enqueue_CB(*test_char);
 
         if (U1STAbits.TRMT == 1) {
             PutChar(test_char[i]);
-            i++;
         }
+            i++;
+        
     }
+#ifdef ECHO_TEST
+    int j = 0;
+    while (U1RXREG != '\0') {
+        //if (U1STAbits.URXDA == 1) {
+        PutChar(RXVAR);
+        //U1RXREG++;
+        
+        //j++;
+        }
+    
+    
+    
+    
+    
+    
+    //
+    
+    
+    
+#endif
 
 #endif
 

@@ -1,0 +1,153 @@
+static struct {
+    char RX_data[MAX_BUFFER_LENGTH];
+    int RX_head; // oldest RX_data element
+    int RX_tail; // next available free space
+    int RX_size; // number of elements in buffer
+    int RX_PCF;
+    int collision;
+
+} RX_Buffer;
+
+/* These are some function prototypes */
+void init_RX_buff(void);
+int empty_RXbuff(void);
+int full_RXbuff(void);
+void enqueueRXCB(char input);
+char dequeueRXCB(void);
+
+void init_RX_buff(void) { // init the buffer
+    RX_Buffer.RX_head = 0; // set RX_head to 0
+    RX_Buffer.RX_tail = 0; // set RX_tail to 0
+    // RX_Buffer.RX_size = 0; IDK if I need this
+    RX_Buffer.RX_PCF = 0;
+
+}
+
+int empty_RXbuff(void) {
+    if (RX_Buffer.RX_head == RX_Buffer.RX_tail) { // if RX_head == RX_tail then its empty
+        return 1;
+    } else
+        return 0;
+}
+
+int full_RXbuff(void) {
+    if (RX_Buffer.RX_head == ((RX_Buffer.RX_tail + 1) % MAX_BUFFER_LENGTH)) {
+        return 1;
+    } else
+        return 0;
+}
+
+void enqueueRXCB(char input) { // write to CB
+    if (!full_RXbuff()) { // check if there is space in the circle buffer
+        RX_Buffer.RX_data[RX_Buffer.RX_tail] = input; // this is writing the RX_data to the RX_tail
+        RX_Buffer.RX_tail = (RX_Buffer.RX_tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
+
+
+    }
+
+}
+
+char dequeueRXCB(void) { // read from CB
+    char temp2;
+    if (!empty_RXbuff()) { // check buffer isn't empty, ie. if there is RX_data to dequeue
+        temp2 = RX_Buffer.RX_data[RX_Buffer.RX_head];
+        RX_Buffer.RX_head = (RX_Buffer.RX_head + 1) % MAX_BUFFER_LENGTH;
+        return temp2;
+    }
+
+}
+
+int RX_PutChar(char ch) {
+    if (!full_RXbuff()) { // check if the buffer is full
+        RX_Buffer.RX_PCF = 1;
+        enqueueRXCB(ch); // put the char on the buffer
+
+    }
+    RX_Buffer.RX_PCF = 0;
+    if ((U1STAbits.TRMT == 1) /*|| (RX_Buffer.collision == 1)*/) {
+        //RX_Buffer.collision = 0;
+        IFS0bits.U1TXIF = 1;
+        return SUCCESS;
+    }
+    return ERROR;
+
+}
+
+
+
+static struct {
+    char data[MAX_BUFFER_LENGTH];
+    int head; // oldest data element
+    int tail; // next available free space
+    int size; // number of elements in buffer
+    int putCharFlag;
+    int collision;
+
+} CircleBuffer;
+
+
+
+/* These are some function prototypes */
+void init_buff(void);
+int check_EmptyBuff(void);
+int check_FullBuff(void);
+void enqueue_CB(char input);
+char dequeue_CB(void);
+
+void init_buff(void) { // init the buffer
+    CircleBuffer.head = 0; // set head to 0
+    CircleBuffer.tail = 0; // set tail to 0
+    // CircleBuffer.size = 0; IDK if I need this
+    CircleBuffer.putCharFlag = 0;
+
+}
+
+int check_EmptyBuff(void) {
+    if (CircleBuffer.head == CircleBuffer.tail) { // if head == tail then its empty
+        return 1;
+    } else
+        return 0;
+}
+
+int check_FullBuff(void) {
+    if (CircleBuffer.head == ((CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH)) {
+        return 1;
+    } else
+        return 0;
+}
+
+void enqueue_CB(char input) { // write to CB
+    if (!check_FullBuff()) { // check if there is space in the circle buffer
+        CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
+        CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
+
+
+    }
+
+}
+
+char dequeue_CB(void) { // read from CB
+    char temp;
+    if (!check_EmptyBuff()) { // check buffer isn't empty, ie. if there is data to dequeue
+        temp = CircleBuffer.data[CircleBuffer.head];
+        CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
+        return temp;
+    }
+
+}
+
+int PutChar(char ch) {
+    if (!check_FullBuff()) { // check if the buffer is full
+        CircleBuffer.putCharFlag = 1;
+        enqueue_CB(ch); // put the char on the buffer
+
+    }
+    CircleBuffer.putCharFlag = 0;
+    if ((U1STAbits.TRMT == 1) /*|| (CircleBuffer.collision == 1)*/) {
+        //CircleBuffer.collision = 0;
+        IFS0bits.U1TXIF = 1;
+        return SUCCESS;
+    }
+    return ERROR;
+
+} 
