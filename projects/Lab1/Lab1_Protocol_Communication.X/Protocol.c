@@ -5,33 +5,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//#define MAIN_TEST
+/* These are some function prototypes */
+void init_buff(void);
+int check_EmptyBuff(void);
+int check_FullBuff(void);
+void enqueue_CB(char input);
+char dequeue_CB(void);
+unsigned char checkSum(char * payload);
+
+/* Here are some global definitions */
 #define Fpb 40e6 
 #define desired_baud 115200
 #define BaudRate ((Fpb / desired_baud) / 16) - 1; // baud rate gen value of 21 gives Baud Rate = 115k
-#define UART_TEST
-#define RXTEMP
 #define ECHO_TEST
 #define BUFFER_TEST
-#define PUTCHAR_TEST
+//#define PUTCHAR_TEST
 #define MAX_BUFFER_LENGTH 32
+#define CHECKSUM_TEST
 //#define TESTHARNESS
 char RXVAR;
+int collision;
+
+unsigned char checkSum(char * payload) {
+    unsigned char checksum = 0;
+    int length = sizeof (payload) / sizeof (payload[0]);
+    int i;
+    for (i = 0; i < (length - 1); i++) {
+        checksum = (checksum >> 1) | (checksum << 7);
+        checksum += payload[i];
+        checksum &= 0xff;
+    }
+    return checksum;
+}
 
 int Protocol_Init(void) {
-
-
-    /*
-     Make sure to check: UTXBF reg status for state of TX buffer
-     *                   TRMT reg to check if shift reg is empty
-     *                   RIDLE - Receiver Idle bit
-     *                   PERR - Parity error status
-     *                   FERR - Framing error status
-     *                   URXDA - RX buffer data status
-     */
-
-
-
     U1STACLR = 0xff;
     U1BRG = BaudRate;
 
@@ -55,8 +62,14 @@ int Protocol_Init(void) {
 
     U1MODEbits.ON = 1; // Turn UART on
 
-
-
+     /*
+     Make sure to check: UTXBF reg status for state of TX buffer
+     *                   TRMT reg to check if shift reg is empty
+     *                   RIDLE - Receiver Idle bit
+     *                   PERR - Parity error status
+     *                   FERR - Framing error status
+     *                   URXDA - RX buffer data status
+     */
 }
 
 static struct {
@@ -70,20 +83,12 @@ static struct {
 
 } CircleBuffer;
 
-/* These are some function prototypes */
-void init_buff(void);
-int check_EmptyBuff(void);
-int check_FullBuff(void);
-void enqueue_CB(char input);
-char dequeue_CB(void);
-
 void init_buff(void) { // init the buffer
     CircleBuffer.head = 0; // set head to 0
     CircleBuffer.tail = 0; // set tail to 0
     // CircleBuffer.size = 0; IDK if I need this
     CircleBuffer.putCharFlag = 0;
     //CircleBuffer.RXVAR = 0;
-
 }
 
 int check_EmptyBuff(void) {
@@ -104,10 +109,7 @@ void enqueue_CB(char input) { // write to CB
     if (!check_FullBuff()) { // check if there is space in the circle buffer
         CircleBuffer.data[CircleBuffer.tail] = input; // this is writing the data to the tail
         CircleBuffer.tail = (CircleBuffer.tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
-
-
     }
-
 }
 
 char dequeue_CB(void) { // read from CB
@@ -117,77 +119,66 @@ char dequeue_CB(void) { // read from CB
         CircleBuffer.head = (CircleBuffer.head + 1) % MAX_BUFFER_LENGTH;
         return temp;
     }
-
 }
 
 int PutChar(char ch) {
     if (!check_FullBuff()) { // check if the buffer is full
         CircleBuffer.putCharFlag = 1;
-
         enqueue_CB(ch); // put the char on the buffer
-
     }
     CircleBuffer.putCharFlag = 0;
-    if ((U1STAbits.TRMT == 1) /*|| (CircleBuffer.collision == 1)*/) {
-        //CircleBuffer.collision = 0;
+    if ((U1STAbits.TRMT == 1) || (collision == 1)) {
+        collision = 0;
         IFS0bits.U1TXIF = 1;
         return SUCCESS;
     }
-
-
-
-
     return ERROR;
-
 }
 
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
-
-
-    IFS0bits.U1RXIF = 0;
-
-
-
+    if (IFS0bits.U1RXIF == 1) {
+        IFS0bits.U1RXIF = 0;
+    }
     if (IFS0bits.U1TXIF == 1) {
-
         if (CircleBuffer.putCharFlag == 0) {
-
             U1TXREG = dequeue_CB(); // value from CB goes into TX reg
             IFS0bits.U1TXIF = 0;
+        } else {
+            collision = 1;
         }
-
     }
-
-
-    //  IFS0bits.U1TXIF = 0; // clear interrupt flag
-
 }
 
 #ifdef TESTHARNESS
 
 int main() {
     //while (1) {
-    char test_char[] = "Below I type hello:\n ";
-
+    char test_char[] = "TX once please....\n ";
     //char test_RXcopy[] = test_char;
     BOARD_Init();
     Protocol_Init();
     init_buff();
+    
 #ifdef PUTCHAR_TEST
     int i = 0;
     // writeUART(test_char);
     while (i < (sizeof test_char) - 1) {
         //enqueue_CB(test_char[i]);
-
         if (U1STAbits.TRMT == 1) {
             PutChar(test_char[i]);
             i++;
         }
     }
 #endif
-    
+
+#ifdef CHECKSUM_TEST
+    char test1[] = "0x817F";
+    unsigned char t1_sum = checkSum(test1);
+    PutChar(t1_sum);
+    //sprintf(t1_sum, "\n")
+#endif
+
 #ifdef ECHO_TEST
-    
     while (1) { // always running in background
         if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
             PutChar(U1RXREG); // initiate the TX
@@ -196,7 +187,6 @@ int main() {
 #endif
 
 #endif
-
     while (1);
     BOARD_End();
     //return 0;
