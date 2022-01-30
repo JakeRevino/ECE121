@@ -35,8 +35,8 @@ int Protocol_Init(void) {
     U1STACLR = 0xff;
     U1BRG = BaudRate;
 
-    U1MODEbits.PDSEL0 = 0;
-    U1MODEbits.PDSEL1 = 0; // sets 8-data and no parity
+    U1MODEbits.PDSEL = 0b00;
+   // U1MODEbits.PDSEL1 = 0; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
     U1MODEbits.UEN = 2; // enable UART
 
@@ -44,15 +44,15 @@ int Protocol_Init(void) {
     IPC6bits.U1IS = 0; // Interrupt sub-protocol priority
 
     IEC0bits.U1TXIE = 1;
-    U1STAbits.UTXISEL0 = 0;
-    U1STAbits.UTXISEL1 = 1;
+    U1STAbits.UTXISEL = 0b10;
+   // U1STAbits.UTXISEL1 = 1;
     U1STAbits.UTXEN = 1;
 
     IEC0bits.U1RXIE = 1;
-    U1STAbits.URXISEL0 = 0;
-    U1STAbits.URXISEL1 = 0;
+    U1STAbits.URXISEL = 0b00;
+  //  U1STAbits.URXISEL1 = 0;
     U1STAbits.URXEN = 1;
-    
+
     U1MODEbits.ON = 1; // Turn UART on
 
 
@@ -144,11 +144,11 @@ int PutChar(char ch) {
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
     if (IFS0bits.U1RXIF == 1) {
-      //  RXVAR = U1RXREG;
+        RXVAR = U1RXREG;
         IFS0bits.U1RXIF = 0;
-    
+
     }
-    
+
     if (IFS0bits.U1TXIF == 1) {
 
         if (CircleBuffer.putCharFlag == 0) {
@@ -167,9 +167,9 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-    
+
     char test_char[] = "Here we - HERE WE - HERE WE FUCKING GOOO!\n ";
-    
+
     //char test_RXcopy[] = test_char;
     BOARD_Init();
     Protocol_Init();
@@ -178,33 +178,34 @@ int main() {
     int i = 0;
     // writeUART(test_char);
     while (i < (sizeof test_char) - 1) {
-         enqueue_CB(*test_char);
+        //enqueue_CB(test_char[i]);
 
         if (U1STAbits.TRMT == 1) {
             PutChar(test_char[i]);
-        }
-            i++;
         
+            i++;
+        }
     }
 #ifdef ECHO_TEST
     int j = 0;
-    while (U1RXREG != '\0') {
-        //if (U1STAbits.URXDA == 1) {
+    if (RXVAR != '\0') {
+        if (U1STAbits.URXDA == 1) {
         PutChar(RXVAR);
-        //U1RXREG++;
-        
+        RXVAR++;
+
         //j++;
-        }
-    
-    
-    
-    
-    
-    
+    }
+    }
+
+
+
+
+
+
     //
-    
-    
-    
+
+
+
 #endif
 
 #endif
