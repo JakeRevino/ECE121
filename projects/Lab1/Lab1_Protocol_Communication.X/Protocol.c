@@ -36,7 +36,7 @@ int Protocol_Init(void) {
     U1BRG = BaudRate;
 
     U1MODEbits.PDSEL = 0b00;
-   // U1MODEbits.PDSEL1 = 0; // sets 8-data and no parity
+    // U1MODEbits.PDSEL1 = 0; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
     U1MODEbits.UEN = 2; // enable UART
 
@@ -45,12 +45,12 @@ int Protocol_Init(void) {
 
     IEC0bits.U1TXIE = 1;
     U1STAbits.UTXISEL = 0b10;
-   // U1STAbits.UTXISEL1 = 1;
+    // U1STAbits.UTXISEL1 = 1;
     U1STAbits.UTXEN = 1;
 
     IEC0bits.U1RXIE = 1;
     U1STAbits.URXISEL = 0b00;
-  //  U1STAbits.URXISEL1 = 0;
+    //  U1STAbits.URXISEL1 = 0;
     U1STAbits.URXEN = 1;
 
     U1MODEbits.ON = 1; // Turn UART on
@@ -143,11 +143,10 @@ int PutChar(char ch) {
 
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
-    if (IFS0bits.U1RXIF == 1) {
-        RXVAR = U1RXREG;
-        IFS0bits.U1RXIF = 0;
 
-    }
+    IFS0bits.U1RXIF = 0;
+
+
 
     if (IFS0bits.U1TXIF == 1) {
 
@@ -167,8 +166,8 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-
-    char test_char[] = "Here we - HERE WE - HERE WE FUCKING GOOO!\n ";
+    //while (1) {
+    char test_char[] = "Below I type hello:\n ";
 
     //char test_RXcopy[] = test_char;
     BOARD_Init();
@@ -182,30 +181,18 @@ int main() {
 
         if (U1STAbits.TRMT == 1) {
             PutChar(test_char[i]);
-        
             i++;
         }
     }
+#endif
+    
 #ifdef ECHO_TEST
-    int j = 0;
-    if (RXVAR != '\0') {
-        if (U1STAbits.URXDA == 1) {
-        PutChar(RXVAR);
-        RXVAR++;
-
-        //j++;
+    
+    while (1) { // always running in background
+        if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
+            PutChar(U1RXREG); // initiate the TX
+        }
     }
-    }
-
-
-
-
-
-
-    //
-
-
-
 #endif
 
 #endif
@@ -214,7 +201,6 @@ int main() {
     BOARD_End();
     //return 0;
 }
-#endif
 
 
 
