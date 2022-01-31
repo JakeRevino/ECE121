@@ -1,11 +1,7 @@
 
-   
-int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload);
-int Protocol_SendDebugMessage(char *Message);
 unsigned char Protocol_ReadNextID(void);
-int Protocol_GetPayload(void* payload);
-    char Protocol_IsMessageAvailable(void);
-    char Protocol_IsQueueFull(void);
+        int Protocol_GetPayload(void* payload);
+
 char Protocol_IsError(void);
 unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable);
 unsigned int Protocol_IntEndednessConversion(unsigned int inVariable);
@@ -40,4 +36,8 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn);
 #define LEDS_SET(leds) do { LATE = (leds); } while (0)
 
 #endif	/* PROTOCOL_H */
+
+
+
+
 

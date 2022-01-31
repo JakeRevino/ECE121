@@ -4,6 +4,8 @@
 #include <sys/attribs.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <MessageIDs.h>
 
 /* These are some function prototypes */
 void init_buff(void);
@@ -35,38 +37,6 @@ static struct {
     int size; // number of elements in buffer
 } CircleBuffer;
 
-int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
-    PutChar(HEAD);
-    unsigned char length = len + 1;
-    PutChar(length);
-    unsigned char checksum = ID;
-    PutChar(ID);
-    unsigned char i;
-    unsigned char *payload = (unsigned char*)Payload;
-    
-    for (i = 0; i <= length; ++i) {
-        PutChar(payload[i]);
-        checksum = checkSum(payload);
-    }
-    PutChar(TAIL);
-    PutChar(checksum);
-    PutChar('\r');
-    PutChar('\n');
-    
-}
-
-unsigned char checkSum(char * payload) {
-    unsigned char checksum = 0;
-    int length = (sizeof (payload)) / (sizeof (payload[0]));
-    int i;
-    for (i = 0; i < (length - 1); i++) {
-        checksum = (checksum >> 1) | (checksum << 7);
-        checksum += payload[i];
-        checksum &= 0xff;
-    }
-    return checksum;
-}
-
 int Protocol_Init(void) {
     U1STACLR = 0xffff;
     U1BRG = BaudRate;
@@ -96,6 +66,88 @@ int Protocol_Init(void) {
      *                   FERR - Framing error status
      *                   URXDA - RX buffer data status
      */
+}
+
+int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
+    if (HEAD) {
+        PutChar(HEAD);
+        unsigned char length = len + 1;
+        PutChar(length);
+        unsigned char checksum = ID;
+        PutChar(ID);
+        unsigned char i;
+        unsigned char *payload = (unsigned char*) Payload;
+
+        for (i = 0; i <= length; ++i) {
+            PutChar(payload[i]);
+            checksum = checkSum(payload);
+        }
+        PutChar(TAIL);
+        PutChar(checksum);
+        PutChar('\r');
+        PutChar('\n');
+        return SUCCESS;
+    }
+    return ERROR;
+}
+
+int Protocol_SendDebugMessage(char *Message) {
+    return Protocol_SendMessage(strlen(Message), ID_DEBUG, Message);
+}
+
+unsigned char Protocol_ReadNextID(void) {
+    /* need to get the next ID */
+}
+
+int Protocol_GetPayload(void* payload) {
+    int *Payload = (int*) payload;
+    return *Payload;
+}
+
+char Protocol_IsMessageAvailable(void) {
+    if (!check_EmptyBuff()) {
+        return TRUE;
+    }
+}
+
+char Protocol_IsQueueFull(void) {
+    if (check_FullBuff()) {
+        return TRUE;
+    }
+}
+
+char Protocol_IsError(void) {
+
+}
+
+unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
+
+}
+
+unsigned int Protocol_IntEndednessConversion(unsigned int inVariable) {
+
+}
+
+unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char curChecksum) {
+  // unsigned char *theChar = (int)charIn;
+//    theChar = (char*)charIn;
+    
+}
+
+void Protocol_RunReceiveStateMachine(unsigned char charIn) {
+
+}
+
+unsigned char checkSum(char * payload) {
+    unsigned char checksum = 0;
+    int length = (sizeof (payload)) / (sizeof (payload[0]));
+    int i;
+    for (i = 0; i < (length - 1); i++) {
+        checksum = (checksum >> 1) | (checksum << 7);
+        checksum += payload[i];
+        checksum &= 0xff;
+    }
+    return checksum;
 }
 
 void init_buff(void) { // init the buffer
@@ -169,7 +221,6 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 int main() {
     //while (1) {
     char test_char[] = "TX once please....\n ";
-    //char test_RXcopy[] = test_char;
     BOARD_Init();
     Protocol_Init();
     init_buff();
@@ -189,11 +240,11 @@ int main() {
     char test1[] = "0x817F";
     unsigned char t1_sum = checkSum(test1);
     PutChar(t1_sum);
-    //sprintf(t1_sum, "\n")
+    sprintf(t1_sum, "\n")
 #endif
 
 #ifdef ECHO_TEST
-    while (1) { // always running in background
+            while (1) { // always running in background
         if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
             PutChar(U1RXREG); // initiate the TX
         }
