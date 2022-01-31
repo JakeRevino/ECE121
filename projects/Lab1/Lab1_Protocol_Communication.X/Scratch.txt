@@ -1,5 +1,5 @@
 
-    int Protocol_Init(void);
+   
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload);
 int Protocol_SendDebugMessage(char *Message);
 unsigned char Protocol_ReadNextID(void);
