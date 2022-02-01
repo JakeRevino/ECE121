@@ -18,16 +18,18 @@ unsigned char checkSum(char * payload);
 /* Here are some global definitions */
 #define Fpb 40e6 
 #define desired_baud 115200
-#define BaudRate ((Fpb / desired_baud) / 16) - 1; // baud rate gen value of 21 gives Baud Rate = 115k
+#define BaudRate ((Fpb / desired_baud) / 16) - 1 // baud rate gen value of 21 gives Baud Rate = 115k
 #define ECHO_TEST
 #define BUFFER_TEST
 #define PUTCHAR_TEST
+#define SENDMSG_TEST
 #define MAX_BUFFER_LENGTH 32
+#define maxPAYLOADlength 128
+//#define END1 '\r'
+//#define END2 '\n'
 //#define CHECKSUM_TEST
-//#define TESTHARNESS
-char RXVAR;
-int collision;
-int putCharFlag = 0;
+static int collision = 0;
+static int putCharFlag = 0;
 
 /* Making structs for CB and Packet */
 static struct {
@@ -36,6 +38,16 @@ static struct {
     int tail; // next available free space
     int size; // number of elements in buffer
 } CircleBuffer;
+
+static struct {
+    unsigned char packHEAD;
+    unsigned char packLENGTH;
+    unsigned char packPAYLOAD;
+    unsigned char packTAIL;
+    unsigned char packCHECKSUM;
+    unsigned char packEND1;
+    unsigned char packEND2;
+} PACKET;
 
 int Protocol_Init(void) {
     U1STACLR = 0xffff;
@@ -69,26 +81,23 @@ int Protocol_Init(void) {
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
-    if (HEAD) {
-        PutChar(HEAD);
-        unsigned char length = len + 1;
-        PutChar(length);
-        unsigned char checksum = ID;
-        PutChar(ID);
-        unsigned char i;
-        unsigned char *payload = (unsigned char*) Payload;
+    PutChar(HEAD);
+    unsigned char length = len + 1;
+    PutChar(length);
+    unsigned char checksum = ID;
+    PutChar(ID);
+    unsigned char i;
+    unsigned char *payload = (unsigned char*) Payload;
 
-        for (i = 0; i <= length; ++i) {
-            PutChar(payload[i]);
-            checksum = checkSum(payload);
-        }
-        PutChar(TAIL);
-        PutChar(checksum);
-        PutChar('\r');
-        PutChar('\n');
-        return SUCCESS;
+    for (i = 0; i <= length; i++) {
+        PutChar(payload[i]);
+        checksum = Protocol_CalcIterativeChecksum(*payload, checksum);
     }
-    return ERROR;
+    PutChar(TAIL);
+    PutChar(checksum);
+    PutChar('\r');
+    PutChar('\n');
+    return SUCCESS;
 }
 
 int Protocol_SendDebugMessage(char *Message) {
@@ -100,8 +109,10 @@ unsigned char Protocol_ReadNextID(void) {
 }
 
 int Protocol_GetPayload(void* payload) {
-    int *Payload = (int*) payload;
-    return *Payload;
+    unsigned char *Payload = (unsigned char*) payload;
+    PACKET.packPAYLOAD = *Payload;
+    return SUCCESS;
+    /* takes in memory location of the payload */
 }
 
 char Protocol_IsMessageAvailable(void) {
@@ -117,27 +128,35 @@ char Protocol_IsQueueFull(void) {
 }
 
 char Protocol_IsError(void) {
-
+    if (U1STAbits.PERR | U1STAbits.FERR | U1STAbits.OERR) {
+        return TRUE;
+    }
 }
 
 unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
+    /* 1 line */
 
 }
 
 unsigned int Protocol_IntEndednessConversion(unsigned int inVariable) {
+    /* about 6 lines */
 
 }
 
 unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char curChecksum) {
-  // unsigned char *theChar = (int)charIn;
-//    theChar = (char*)charIn;
-    
+    curChecksum = (curChecksum >> 1) | (curChecksum << 7);
+    curChecksum = curChecksum + charIn;
+    return curChecksum;
+
+
 }
 
 void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
+
 }
 
+/*
 unsigned char checkSum(char * payload) {
     unsigned char checksum = 0;
     int length = (sizeof (payload)) / (sizeof (payload[0]));
@@ -148,7 +167,7 @@ unsigned char checkSum(char * payload) {
         checksum &= 0xff;
     }
     return checksum;
-}
+} */
 
 void init_buff(void) { // init the buffer
     CircleBuffer.head = 0; // set head to 0
@@ -200,16 +219,23 @@ int PutChar(char ch) {
     return ERROR;
 }
 
+unsigned char GetChar(void) {
+
+}
+
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     if (IFS0bits.U1RXIF == 1) {
+
         IFS0bits.U1RXIF = 0;
-        LEDS_SET(0b11111111);
+
     }
     if (IFS0bits.U1TXIF == 1) {
         if (putCharFlag == 0) {
             U1TXREG = dequeue_CB(); // value from CB goes into TX reg
+            // LEDS_SET();
             IFS0bits.U1TXIF = 0;
-            LEDS_SET(0b11001001);
+
+
         } else {
             collision = 1;
         }
@@ -219,43 +245,51 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-    //while (1) {
-    char test_char[] = "TX once please....\n ";
-    BOARD_Init();
-    Protocol_Init();
-    init_buff();
-    LEDS_INIT();
+    while (1) {
+        char test_char[] = "TX once please....\n ";
+        BOARD_Init();
+        Protocol_Init();
+        init_buff();
+        LEDS_INIT();
 
 #ifdef PUTCHAR_TEST
-    int i = 0;
-    while (i < (sizeof test_char) - 1) {
-        if (U1STAbits.TRMT == 1) {
-            PutChar(test_char[i]);
-            i++;
+        int i = 0;
+        while (i < (sizeof test_char) - 1) {
+            if (U1STAbits.TRMT == 1) {
+                PutChar(test_char[i]);
+                i++;
+            }
         }
-    }
+#endif
+        
+#ifdef SENDMSG_TEST
+        Protocol_SendMessage('1', 'H', "1234");
+        
+        
 #endif
 
 #ifdef CHECKSUM_TEST
-    char test1[] = "0x817F";
-    unsigned char t1_sum = checkSum(test1);
-    PutChar(t1_sum);
-    sprintf(t1_sum, "\n")
+        char test1[] = "0x817F";
+        unsigned char t1_sum = checkSum(test1);
+        PutChar(t1_sum);
+        sprintf(t1_sum, "\n")
 #endif
 
 #ifdef ECHO_TEST
-            while (1) { // always running in background
-        if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
-            PutChar(U1RXREG); // initiate the TX
+                while (1) { // always running in background
+            if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
+                PutChar(U1RXREG); // initiate the TX
+            }
         }
-    }
 #endif
 
+    }
 #endif
     while (1);
     BOARD_End();
     //return 0;
 }
+
 
 
 

@@ -1,15 +1,11 @@
-
 unsigned char Protocol_ReadNextID(void);
-        int Protocol_GetPayload(void* payload);
+        
 
-char Protocol_IsError(void);
-unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable);
-unsigned int Protocol_IntEndednessConversion(unsigned int inVariable);
-    unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char curChecksum);
-
+    unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable);
+    unsigned int Protocol_IntEndednessConversion(unsigned int inVariable);
 
 void Protocol_RunReceiveStateMachine(unsigned char charIn);
-
+    
 
 
 
