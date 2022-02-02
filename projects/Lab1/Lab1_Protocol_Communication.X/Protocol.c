@@ -166,35 +166,63 @@ unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char
 }
 
 void Protocol_RunReceiveStateMachine(unsigned char charIn) {
-//    char MODE = 'WAIT_FOR_HEAD';
-//    switch(MODE) {
-//        case 'WAIT_FOR_HEAD' :
-//            
-//            if (charIn == HEAD){
-//                
-//                MODE = 'GET_HEAD';    
-//            }
-//            
-//            break;
-//            
-//        case 'GET_HEAD':
-//            PACKET.HEAD = charIn;
-//            /* getting head */
-//            break;
-//            
-//        case 'GET_LENGTH':
-//            /*...*/
-//            break;
-//            
-//        case 'ID':
-//            /*....*/
-//            break;
-//    
-//    
-//    
-//    
-//    
-//    }
+    char *checksumError = "Checksums didn't match\n";
+    char *tailError = "No tail was given\n";
+    unsigned char *pack = &charIn;
+    unsigned char thisLength = pack[1];
+    unsigned char thisID = pack[2];
+    unsigned char thisPayload, thisChecksum, thisTail, givenChecksum;
+    unsigned char i;
+    unsigned char pos = 3;
+    while (i < thisLength) {
+        thisPayload = pack[pos];
+        thisChecksum = Protocol_CalcIterativeChecksum(pack[pos], thisChecksum);
+        pos++;
+        i++;
+    }
+    thisTail = pack[pos];
+    if (thisTail) {
+        givenChecksum = pack[pos + 1];
+        if (thisChecksum == givenChecksum) {
+            enqueue_CB(thisTail, &RXCB);
+            enqueue_CB(thisID, &RXCB);
+            enqueue_CB(thisPayload, &RXCB);
+        } else {
+            Protocol_SendDebugMessage(checksumError);
+        }
+    } else {
+        Protocol_SendDebugMessage(tailError);
+    }
+
+    //    char MODE = 'WAIT_FOR_HEAD';
+    //    switch(MODE) {
+    //        case 'WAIT_FOR_HEAD' :
+    //            
+    //            if (charIn == HEAD){
+    //                
+    //                MODE = 'GET_HEAD';    
+    //            }
+    //            
+    //            break;
+    //            
+    //        case 'GET_HEAD':
+    //            PACKET.HEAD = charIn;
+    //            /* getting head */
+    //            break;
+    //            
+    //        case 'GET_LENGTH':
+    //            /*...*/
+    //            break;
+    //            
+    //        case 'ID':
+    //            /*....*/
+    //            break;
+    //    
+    //    
+    //    
+    //    
+    //    
+    //    }
 
 
 }
@@ -254,14 +282,14 @@ int PutChar(char ch) {
     if (check_FullBuff(&TXCB)) { // check if the buffer is full
         return ERROR;
     }
-        putCharFlag = 1;
-        enqueue_CB(ch, &TXCB); // put the char on the buffer
-    
+    putCharFlag = 1;
+    enqueue_CB(ch, &TXCB); // put the char on the buffer
+
     putCharFlag = 0;
     if ((U1STAbits.TRMT == 1) | (collision == 1)) {
         collision = 0;
         IFS0bits.U1TXIF = 1;
-       
+
     }
     return SUCCESS;
 }
@@ -277,12 +305,12 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
     }
     if (IFS0bits.U1TXIF == 1) {
-       
+
         if (putCharFlag == 0) {
             U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
             // LEDS_SET(0b11110011);
-             IFS0bits.U1TXIF = 0;
-            
+            IFS0bits.U1TXIF = 0;
+
 
 
         } else {
@@ -294,45 +322,45 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-   // while (1) {
-        char test_char[] = {'G', 'E', 'T', ' ', 'F', 'U', 'C', 'K', '3', 'D', '\n'};
-        BOARD_Init();
-        Protocol_Init();
-        init_buff(&TXCB);
-        init_buff(&RXCB);
-       // LEDS_INIT();
+    // while (1) {
+    char test_char[] = {'G', 'E', 'T', ' ', 'F', 'U', 'C', 'K', '3', 'D', '\n'};
+    BOARD_Init();
+    Protocol_Init();
+    init_buff(&TXCB);
+    init_buff(&RXCB);
+    // LEDS_INIT();
 
 #ifdef PUTCHAR_TEST
-        int i = 0;
-        while (test_char[i] != '\0') {
-            while (!U1STAbits.TRMT);
-                PutChar(test_char[i]);
-                i++;
-            
-        }
+    int i = 0;
+    while (test_char[i] != '\0') {
+        while (!U1STAbits.TRMT);
+        PutChar(test_char[i]);
+        i++;
+
+    }
 #endif
 
 #ifdef SENDMSG_TEST
-        //char testPAYLOAD[] = {'1', '2', '3', '4'};
-        Protocol_SendMessage('1', 'D', testPAYLOAD);
+    //char testPAYLOAD[] = {'1', '2', '3', '4'};
+    Protocol_SendMessage('1', 'D', testPAYLOAD);
 #endif
 
 #ifdef CHECKSUM_TEST
-        char test1[] = "0x817F";
-        unsigned char t1_sum = checkSum(test1);
-        PutChar(t1_sum);
-        sprintf(t1_sum, "\n")
+    char test1[] = "0x817F";
+    unsigned char t1_sum = checkSum(test1);
+    PutChar(t1_sum);
+    sprintf(t1_sum, "\n")
 #endif
 
 #ifdef ECHO_TEST
-                while (1) { // always running in background
-            if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
-                PutChar(U1RXREG); // initiate the TX
-            }
+            while (1) { // always running in background
+        if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
+            PutChar(U1RXREG); // initiate the TX
         }
+    }
 #endif
 
-    
+
 #endif
     while (1);
     BOARD_End();
