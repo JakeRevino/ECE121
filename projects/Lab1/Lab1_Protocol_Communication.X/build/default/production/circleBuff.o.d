@@ -1,1 +1,10 @@
-build/default/production/circleBuff.o: circleBuff.c
+build/default/production/circleBuff.o: circleBuff.c \
+ ../../OneDrive/Desktop/jrevino-master/include/Protocol.h \
+ ../../OneDrive/Desktop/jrevino-master/include/circleBuff.h \
+ ../../OneDrive/Desktop/jrevino-master/include/BOARD.h
+
+../../OneDrive/Desktop/jrevino-master/include/Protocol.h:
+
+../../OneDrive/Desktop/jrevino-master/include/circleBuff.h:
+
+../../OneDrive/Desktop/jrevino-master/include/BOARD.h:

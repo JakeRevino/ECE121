@@ -6,24 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <MessageIDs.h>
+#include <circleBuff.h>
 
-/* These are some function prototypes */
-void init_buff(void);
-int check_EmptyBuff(void);
-int check_FullBuff(void);
-void enqueue_CB(char input);
-char dequeue_CB(void);
-unsigned char checkSum(char * payload);
+/* These are some function prototypes 
+void init_buff(struct CircleBuffer *buff);
+int check_EmptyBuff(struct CircleBuffer *buff);
+int check_FullBuff(struct CircleBuffer *buff);
+void enqueue_CB(unsigned char input, struct CircleBuffer *buff);
+char dequeue_CB(struct CircleBuffer *buff);
+//unsigned char checkSum(char * payload);
+ * */
 
 /* Here are some global definitions */
 #define Fpb 40e6 
 #define desired_baud 115200
 #define BaudRate ((Fpb / desired_baud) / 16) - 1 // baud rate gen value of 21 gives Baud Rate = 115k
-#define ECHO_TEST
-#define BUFFER_TEST
+//#define ECHO_TEST
+//#define BUFFER_TEST
 #define PUTCHAR_TEST
-#define SENDMSG_TEST
-#define MAX_BUFFER_LENGTH 32
+//#define SENDMSG_TEST
+//#define MAX_BUFFER_LENGTH 32
 #define maxPAYLOADlength 128
 //#define END1 '\r'
 //#define END2 '\n'
@@ -31,13 +33,23 @@ unsigned char checkSum(char * payload);
 static int collision = 0;
 static int putCharFlag = 0;
 
-/* Making structs for CB and Packet */
-static struct {
+/* Making structs for CB and Packet 
+struct {
     char data[MAX_BUFFER_LENGTH];
-    int head; // oldest data element
-    int tail; // next available free space
-    int size; // number of elements in buffer
+    static int head; // oldest data element
+    static int tail; // next available free space
+    static int size; // number of elements in buffer
 } CircleBuffer;
+ * */
+
+static struct CircleBuffer TXCB = {};
+static struct CircleBuffer RXCB = {};
+//static struct {
+//    char RXdata[MAX_BUFFER_LENGTH];
+//    int RXhead;
+//    int RXtail;
+//    int RXsize;
+//} RXCB;
 
 static struct {
     unsigned char packHEAD;
@@ -50,12 +62,12 @@ static struct {
 } PACKET;
 
 int Protocol_Init(void) {
-    U1STACLR = 0xffff;
+    U1STACLR = 0xff;
     U1BRG = BaudRate;
 
     U1MODEbits.PDSEL = 0b00; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
-    U1MODEbits.UEN = 2; // enable UART
+    U1MODEbits.UEN = 0; // enable UART
 
     IPC6bits.U1IP = 4; // Interrupt protocol priority
     IPC6bits.U1IS = 0; // Interrupt sub-protocol priority
@@ -81,6 +93,8 @@ int Protocol_Init(void) {
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
+    //char testHEAD = 'H';
+    //PutChar(testHEAD);
     PutChar(HEAD);
     unsigned char length = len + 1;
     PutChar(length);
@@ -91,7 +105,7 @@ int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
 
     for (i = 0; i <= length; i++) {
         PutChar(payload[i]);
-        checksum = Protocol_CalcIterativeChecksum(*payload, checksum);
+        checksum = Protocol_CalcIterativeChecksum(payload[i], checksum);
     }
     PutChar(TAIL);
     PutChar(checksum);
@@ -116,13 +130,13 @@ int Protocol_GetPayload(void* payload) {
 }
 
 char Protocol_IsMessageAvailable(void) {
-    if (!check_EmptyBuff()) {
+    if (!check_EmptyBuff(&RXCB)) {
         return TRUE;
     }
 }
 
 char Protocol_IsQueueFull(void) {
-    if (check_FullBuff()) {
+    if (check_FullBuff(&TXCB)) {
         return TRUE;
     }
 }
@@ -152,6 +166,35 @@ unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char
 }
 
 void Protocol_RunReceiveStateMachine(unsigned char charIn) {
+//    char MODE = 'WAIT_FOR_HEAD';
+//    switch(MODE) {
+//        case 'WAIT_FOR_HEAD' :
+//            
+//            if (charIn == HEAD){
+//                
+//                MODE = 'GET_HEAD';    
+//            }
+//            
+//            break;
+//            
+//        case 'GET_HEAD':
+//            PACKET.HEAD = charIn;
+//            /* getting head */
+//            break;
+//            
+//        case 'GET_LENGTH':
+//            /*...*/
+//            break;
+//            
+//        case 'ID':
+//            /*....*/
+//            break;
+//    
+//    
+//    
+//    
+//    
+//    }
 
 
 }
@@ -169,10 +212,11 @@ unsigned char checkSum(char * payload) {
     return checksum;
 } */
 
-void init_buff(void) { // init the buffer
-    CircleBuffer.head = 0; // set head to 0
+/*
+void init_buff(struct CircleBuffer *buff) { // init the buffer
+    buff->head = 0; // set head to 0
     CircleBuffer.tail = 0; // set tail to 0
-    // CircleBuffer.size = 0; IDK if I need this
+
 }
 
 int check_EmptyBuff(void) {
@@ -204,19 +248,22 @@ char dequeue_CB(void) { // read from CB
         return temp;
     }
 }
+ * */
 
 int PutChar(char ch) {
-    if (!check_FullBuff()) { // check if the buffer is full
-        putCharFlag = 1;
-        enqueue_CB(ch); // put the char on the buffer
+    if (check_FullBuff(&TXCB)) { // check if the buffer is full
+        return ERROR;
     }
+        putCharFlag = 1;
+        enqueue_CB(ch, &TXCB); // put the char on the buffer
+    
     putCharFlag = 0;
-    if ((U1STAbits.TRMT == 1) || (collision == 1)) {
+    if ((U1STAbits.TRMT == 1) | (collision == 1)) {
         collision = 0;
         IFS0bits.U1TXIF = 1;
-        return SUCCESS;
+       
     }
-    return ERROR;
+    return SUCCESS;
 }
 
 unsigned char GetChar(void) {
@@ -230,10 +277,12 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
     }
     if (IFS0bits.U1TXIF == 1) {
+       
         if (putCharFlag == 0) {
-            U1TXREG = dequeue_CB(); // value from CB goes into TX reg
-            // LEDS_SET();
-            IFS0bits.U1TXIF = 0;
+            U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
+            // LEDS_SET(0b11110011);
+             IFS0bits.U1TXIF = 0;
+            
 
 
         } else {
@@ -245,27 +294,27 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-    while (1) {
-        char test_char[] = "TX once please....\n ";
+   // while (1) {
+        char test_char[] = {'G', 'E', 'T', ' ', 'F', 'U', 'C', 'K', '3', 'D', '\n'};
         BOARD_Init();
         Protocol_Init();
-        init_buff();
-        LEDS_INIT();
+        init_buff(&TXCB);
+        init_buff(&RXCB);
+       // LEDS_INIT();
 
 #ifdef PUTCHAR_TEST
         int i = 0;
-        while (i < (sizeof test_char) - 1) {
-            if (U1STAbits.TRMT == 1) {
+        while (test_char[i] != '\0') {
+            while (!U1STAbits.TRMT);
                 PutChar(test_char[i]);
                 i++;
-            }
+            
         }
 #endif
-        
+
 #ifdef SENDMSG_TEST
-        Protocol_SendMessage('1', 'H', "1234");
-        
-        
+        //char testPAYLOAD[] = {'1', '2', '3', '4'};
+        Protocol_SendMessage('1', 'D', testPAYLOAD);
 #endif
 
 #ifdef CHECKSUM_TEST
@@ -283,7 +332,7 @@ int main() {
         }
 #endif
 
-    }
+    
 #endif
     while (1);
     BOARD_End();
