@@ -27,7 +27,7 @@ char dequeue_CB(struct CircleBuffer *buff);
 //#define ECHO_TEST
 //#define BUFFER_TEST
 //#define PUTCHAR_TEST
-//#define SENDMSG_TEST
+#define SENDMSG_TEST
 //#define PACKET_TEST
 //#define MAX_BUFFER_LENGTH 32
 //#define CHECKSUM_TEST
@@ -58,16 +58,18 @@ static states MODE = WAIT_FOR_HEAD;
 int Protocol_Init(void) {
     U1STACLR = 0xff;
     U1BRG = BaudRate;
-    U1MODEbits.PDSEL = 0b00; // sets 8-data and no parity
+    IFS0bits.U1RXIF = 0;
+    IFS0bits.U1TXIF = 0;
+    U1MODEbits.PDSEL = 0; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
     U1MODEbits.UEN = 0; // enable UART
-    IPC6bits.U1IP = 4; // Interrupt protocol priority
-    IPC6bits.U1IS = 0; // Interrupt sub-protocol priority
+    IPC6bits.U1IP = 3; // Interrupt protocol priority
+    IPC6bits.U1IS = 1; // Interrupt sub-protocol priority
     IEC0bits.U1TXIE = 1;
-    U1STAbits.UTXISEL = 0b10;
+    U1STAbits.UTXISEL = 0;
     U1STAbits.UTXEN = 1;
     IEC0bits.U1RXIE = 1;
-    U1STAbits.URXISEL = 0b00;
+    U1STAbits.URXISEL = 2;
     U1STAbits.URXEN = 1;
     U1MODEbits.ON = 1; // Turn UART on
 }
@@ -75,15 +77,15 @@ int Protocol_Init(void) {
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     PutChar(HEAD);
     unsigned char length = len + 1;
-    PutChar(length);
+    PutChar(len);
     unsigned char checksum = ID;
-    PutChar(ID);
+    PutChar(128);
     unsigned char i;
     unsigned char *payload = (unsigned char*) Payload;
 
-    for (i = 0; i <= length; i++) {
-        PutChar(payload[i]);
-        checksum = Protocol_CalcIterativeChecksum(payload[i], checksum);
+    for (i = 0; i <= len-1; i++) {
+        PutChar(((unsigned char*) Payload)[i]);
+        checksum = Protocol_CalcIterativeChecksum(((unsigned char*) Payload)[i], checksum);
     }
     PutChar(TAIL);
     PutChar(checksum);
@@ -155,7 +157,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             PACKET.packPAYLOAD = 0;
             PACKET.packCHECKSUM = 0;
             if (charIn == HEAD) {
-                Protocol_SendDebugMessage(tailError);
+               
                 MODE = GET_HEAD;
             }
             break;
@@ -210,13 +212,17 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
 int PutChar(char ch) {
     if (check_FullBuff(&TXCB)) { // check if the buffer is full
+      //  LEDS_SET(0xff);
         return ERROR;
     }
     putCharFlag = 1;
     enqueue_CB(ch, &TXCB); // put the char on the buffer
 
     putCharFlag = 0;
-    if ((U1STAbits.TRMT == 1) | (collision == 1)) {
+    
+    while(!U1STAbits.TRMT);
+    
+    if (((U1STAbits.TRMT == 1) || (collision == 1))) {
         collision = 0;
         IFS0bits.U1TXIF = 1;
     }
@@ -225,7 +231,6 @@ int PutChar(char ch) {
 
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     if (IFS0bits.U1RXIF == 1) {
-       // unsigned char rx = dequeue_CB(&RXCB);
         Protocol_RunReceiveStateMachine(U1RXREG);
 
         IFS0bits.U1RXIF = 0;
@@ -247,13 +252,15 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
 int main() {
    // while (1) {
-        char test_char[] = {'G', 'E', 'T', ' ', 'F', 'U', 'C', 'K', '3', 'D', '\n'};
+        char test_char[] = {'G', 'E', 'T'};
         BOARD_Init();
+        char *message = "FUCK!";
         Protocol_Init();
         init_buff(&TXCB);
         init_buff(&RXCB);
         LEDS_INIT();
-
+       // Protocol_SendMessage(0x05, ID_DEBUG, message);
+        // while (1);
 #ifdef PUTCHAR_TEST
         int i = 0;
         while (test_char[i] != '\0') {
@@ -265,8 +272,8 @@ int main() {
 #endif
 
 #ifdef SENDMSG_TEST
-        //char testPAYLOAD[] = {'1', '2', '3', '4'};
-        Protocol_SendMessage('1', 'D', testPAYLOAD);
+        char testPAYLOAD[] = {'1', '2', '3', '4'};
+        Protocol_SendMessage(4, ID_DEBUG, testPAYLOAD);
 #endif
 
 #ifdef CHECKSUM_TEST
