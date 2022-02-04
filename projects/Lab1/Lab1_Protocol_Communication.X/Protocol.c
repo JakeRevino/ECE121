@@ -26,7 +26,7 @@ char dequeue_CB(struct CircleBuffer *buff);
 #define maxPAYLOADlength 128
 
 /* HERE ARE SOME TEST SUITES */
-//#define ECHO_TEST
+#define ECHO_TEST
 //#define BUFFER_TEST
 //#define PUTCHAR_TEST
 //#define SENDMSG_TEST
@@ -47,6 +47,7 @@ static struct {
     unsigned char packID;
     unsigned char packLEDS;
     unsigned char packPAYLOAD;
+    unsigned char tempPAYLOAD;
     unsigned char packTAIL;
     unsigned char packCHECKSUM;
     unsigned char packEND1;
@@ -156,14 +157,15 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
     switch (MODE) {
         case WAIT_FOR_HEAD:
             //LEDS_SET(0b11111111);
-            //            PACKET.packHEAD = 0;
-            //            PACKET.packLENGTH = 0;
-            //            PACKET.packID = 0;
-            //            PACKET.packPAYLOAD = 0;
+            PACKET.packHEAD = 0;
+            PACKET.packLENGTH = 0;
+            PACKET.packID = 0;
+            PACKET.packPAYLOAD = 0;
             PACKET.packCHECKSUM = 0x00;
+            counter = 0;
             if (charIn == HEAD) {
                 MODE = GET_LENGTH;
-                // charIn++;
+
 
             }
             break;
@@ -188,11 +190,13 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
         case GET_PAYLOAD:
             //LEDS_SET(0b100000000);
             PACKET.packPAYLOAD = charIn;
+
             PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
             counter++;
             // break;
             if (counter == PACKET.packLENGTH - 1) {
                 // counter = 0;
+                LEDS_SET(charIn);
                 MODE = GET_TAIL;
                 //   break;
             }
@@ -218,7 +222,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             }
 
             if (PACKET.packID == ID_LEDS_SET) {
-                LEDS_SET(PACKET.packPAYLOAD);
+                //LEDS_SET(PACKET.packPAYLOAD);
                 //PACKET.packLEDS = 0;
                 MODE = WAIT_FOR_HEAD;
                 // break;
@@ -234,6 +238,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 MODE = WAIT_FOR_HEAD;
                 //break;
             }
+            PACKET.packCHECKSUM = 0;
             break;
 
     }
@@ -262,7 +267,7 @@ int PutChar(char ch) {
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     if (IFS0bits.U1RXIF == 1) {
         IFS0bits.U1RXIF = 0;
-        while (U1STAbits.URXDA == 0);
+        // while (U1STAbits.URXDA == 0);
         Protocol_RunReceiveStateMachine(U1RXREG);
 
 
@@ -320,7 +325,8 @@ int main() {
 #ifdef ECHO_TEST
             while (1) { // always running in background
         if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
-            PutChar(U1RXREG); // initiate the TX
+            // PutChar(U1RXREG); // initiate the TX
+            IFS0bits.U1RXIF = 1;
         }
     }
 #endif
@@ -338,7 +344,4 @@ int main() {
     BOARD_End();
     //return 0;
 }
-
-
-
 
