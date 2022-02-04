@@ -8,7 +8,8 @@
 #include <MessageIDs.h>
 #include <circleBuff.h>
 
-/* These are some function prototypes 
+/*
+//These are some function prototypes 
 void init_buff(struct CircleBuffer *buff);
 int check_EmptyBuff(struct CircleBuffer *buff);
 int check_FullBuff(struct CircleBuffer *buff);
@@ -16,6 +17,7 @@ void enqueue_CB(unsigned char input, struct CircleBuffer *buff);
 char dequeue_CB(struct CircleBuffer *buff);
 //unsigned char checkSum(char * payload);
  * */
+
 
 /* Here are some global definitions */
 #define Fpb 40e6 
@@ -27,13 +29,14 @@ char dequeue_CB(struct CircleBuffer *buff);
 //#define ECHO_TEST
 //#define BUFFER_TEST
 //#define PUTCHAR_TEST
-#define SENDMSG_TEST
+//#define SENDMSG_TEST
 //#define PACKET_TEST
 //#define MAX_BUFFER_LENGTH 32
 //#define CHECKSUM_TEST
 
 static int collision = 0;
 static int putCharFlag = 0;
+static int counter = 0;
 
 static struct CircleBuffer TXCB = {};
 static struct CircleBuffer RXCB = {};
@@ -42,6 +45,7 @@ static struct {
     unsigned char packHEAD;
     unsigned char packLENGTH;
     unsigned char packID;
+    unsigned char packLEDS;
     unsigned char packPAYLOAD;
     unsigned char packTAIL;
     unsigned char packCHECKSUM;
@@ -76,14 +80,14 @@ int Protocol_Init(void) {
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     PutChar(HEAD);
-    unsigned char length = len + 1;
+    //unsigned char length = len + 1;
     PutChar(len);
     unsigned char checksum = ID;
-    PutChar(128);
+    PutChar(ID);
     unsigned char i;
-    unsigned char *payload = (unsigned char*) Payload;
+    //unsigned char *payload = (unsigned char*) Payload;
 
-    for (i = 0; i <= len-1; i++) {
+    for (i = 0; i < len - 1; i++) {
         PutChar(((unsigned char*) Payload)[i]);
         checksum = Protocol_CalcIterativeChecksum(((unsigned char*) Payload)[i], checksum);
     }
@@ -151,78 +155,98 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
     switch (MODE) {
         case WAIT_FOR_HEAD:
+            //LEDS_SET(0b11111111);
             PACKET.packHEAD = 0;
             PACKET.packLENGTH = 0;
             PACKET.packID = 0;
             PACKET.packPAYLOAD = 0;
             PACKET.packCHECKSUM = 0;
             if (charIn == HEAD) {
-               
-                MODE = GET_HEAD;
+                MODE = GET_LENGTH;
+                break;
             }
-            break;
-
-        case GET_HEAD:
-            PACKET.packHEAD = charIn;
-            MODE = GET_LENGTH;
-            break;
 
         case GET_LENGTH:
+            //LEDS_SET(0b11110000);
             PACKET.packLENGTH = charIn;
             MODE = ID;
             break;
 
         case ID:
-            PACKET.packID = charIn;
-            MODE = GET_PAYLOAD;
-            break;
+            //LEDS_SET(0b10101010);
+            if (charIn == ID_LEDS_SET) {
+                PACKET.packLEDS = 1;
+                PACKET.packID = charIn;
+                MODE = GET_PAYLOAD;
+                break;
+            } else {
+                PACKET.packID = charIn;
+                MODE = GET_PAYLOAD;
+                break;
+            }
 
         case GET_PAYLOAD:
+            //LEDS_SET(0b100000000);
             PACKET.packPAYLOAD = charIn;
-            unsigned char counter = 0;
-            while (counter <= PACKET.packLENGTH) {
-                PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
-                counter++;
-            }
-            MODE = GET_TAIL;
+            PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
+            counter++;
             break;
+            if (counter == PACKET.packLENGTH) {
+                counter = 0;
+                MODE = GET_TAIL;
+                break;
+            }
+
+
 
         case GET_TAIL:
+            // LEDS_SET(0b00001000);
             if (charIn == TAIL) {
                 MODE = COMPARE_CHECKSUMS;
+                break;
             } else {
                 Protocol_SendDebugMessage(tailError);
                 MODE = WAIT_FOR_HEAD;
+                break;
             }
-            break;
+            // break;
 
         case COMPARE_CHECKSUMS:
             if (PACKET.packCHECKSUM == charIn) {
+
+                if (PACKET.packLEDS == 1) {
+                    LEDS_SET(PACKET.packPAYLOAD);
+                    PACKET.packLEDS = 0;
+                    MODE = WAIT_FOR_HEAD;
+                    break;
+                }
                 enqueue_CB(PACKET.packLENGTH, &RXCB);
                 enqueue_CB(PACKET.packID, &RXCB);
                 enqueue_CB(PACKET.packPAYLOAD, &RXCB);
                 MODE = WAIT_FOR_HEAD;
+                break;
             } else {
                 Protocol_SendDebugMessage(checksumError);
                 MODE = WAIT_FOR_HEAD;
+                break;
             }
-            break;
+            //break;
     }
 }
 
 int PutChar(char ch) {
     if (check_FullBuff(&TXCB)) { // check if the buffer is full
-      //  LEDS_SET(0xff);
+        //  LEDS_SET(0xff);
         return ERROR;
     }
     putCharFlag = 1;
     enqueue_CB(ch, &TXCB); // put the char on the buffer
 
     putCharFlag = 0;
-    
-    while(!U1STAbits.TRMT);
-    
-    if (((U1STAbits.TRMT == 1) || (collision == 1))) {
+
+    while (!U1STAbits.TRMT);
+
+    if ((U1STAbits.TRMT == 1) || (collision == 1)) {
         collision = 0;
         IFS0bits.U1TXIF = 1;
     }
@@ -251,55 +275,57 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 #ifdef TESTHARNESS
 
 int main() {
-   // while (1) {
-        char test_char[] = {'G', 'E', 'T'};
-        BOARD_Init();
-        char *message = "FUCK!";
-        Protocol_Init();
-        init_buff(&TXCB);
-        init_buff(&RXCB);
-        LEDS_INIT();
-       // Protocol_SendMessage(0x05, ID_DEBUG, message);
-        // while (1);
-#ifdef PUTCHAR_TEST
-        int i = 0;
-        while (test_char[i] != '\0') {
-            while (!U1STAbits.TRMT);
-            PutChar(test_char[i]);
-            i++;
 
-        }
+    char test_char[] = "Please work";
+    BOARD_Init();
+    char *message = "11111111";
+    Protocol_Init();
+    init_buff(&TXCB);
+    init_buff(&RXCB);
+    LEDS_INIT();
+    while (1); // {
+    // Protocol_SendMessage(0x08, ID_LEDS_SET, message);
+
+    // while (1);
+#ifdef PUTCHAR_TEST
+    int i = 0;
+    while (test_char[i] != '\0') {
+        while (!U1STAbits.TRMT);
+        PutChar(test_char[i]);
+        i++;
+
+    }
 #endif
 
 #ifdef SENDMSG_TEST
-        char testPAYLOAD[] = {'1', '2', '3', '4'};
-        Protocol_SendMessage(4, ID_DEBUG, testPAYLOAD);
+    char testPAYLOAD[] = {'1', '2', '3', '4'};
+    Protocol_SendMessage(4, ID_LEDS_SET, testPAYLOAD);
 #endif
 
 #ifdef CHECKSUM_TEST
-        char test1[] = "0x817F";
-        unsigned char t1_sum = checkSum(test1);
-        PutChar(t1_sum);
-        sprintf(t1_sum, "\n")
+    char test1[] = "0x817F";
+    unsigned char t1_sum = checkSum(test1);
+    PutChar(t1_sum);
+    sprintf(t1_sum, "\n")
 #endif
 
 #ifdef ECHO_TEST
-                while (1) { // always running in background
-            if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
-                PutChar(U1RXREG); // initiate the TX
-            }
+            while (1) { // always running in background
+        if (U1STAbits.URXDA == 1) { // buffer full whenever you type 
+            PutChar(U1RXREG); // initiate the TX
         }
+    }
 #endif
 
 #ifdef PACKET_TEST
-            IFS0bits.U1RXIF = 1;
-           
-#endif
-
-
+    IFS0bits.U1RXIF = 1;
 
 #endif
- //   }
+
+
+
+#endif
+    //   }
     while (1);
     BOARD_End();
     //return 0;

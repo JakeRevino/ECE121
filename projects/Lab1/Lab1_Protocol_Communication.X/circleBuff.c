@@ -28,7 +28,7 @@ int check_FullBuff(struct CircleBuffer *buff) {
 void enqueue_CB(char input, struct CircleBuffer *buff) { // write to CB
     if (!check_FullBuff(buff)) { // check if there is space in the circle buffer
         buff->data[buff->tail] = input; // this is writing the data to the tail
-        buff->tail = (buff->tail + 1) % MAX_BUFFER_LENGTH; // this is incrementing 
+        buff->tail = ((buff->tail + 1) % MAX_BUFFER_LENGTH); // this is incrementing 
         buff->size++;
     }
 }
