@@ -2,6 +2,7 @@
     unsigned char Protocol_ReadNextID(void);        
     unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable);
     unsigned int Protocol_IntEndednessConversion(unsigned int inVariable);
+int Protocol_GetPayload(void* payload)
 
 
 
