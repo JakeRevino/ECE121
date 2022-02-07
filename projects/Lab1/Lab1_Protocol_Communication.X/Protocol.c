@@ -199,11 +199,11 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                    
                 } 
                 else if (packID == ID_LEDS_GET) {
-                    if (packCHECKSUM == 0x83) {
+                   // if (packCHECKSUM == 0x83) {
                     ledsVal = LEDS_GET();
                     Protocol_SendMessage(0x02, ID_LEDS_STATE, &ledsVal);
                     MODE = WAIT_FOR_HEAD;
-                    }
+                   // }
                 }
 
             } else {
