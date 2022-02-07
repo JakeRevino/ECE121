@@ -185,24 +185,24 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
 
         case GET_PAYLOAD:
-            if (counter == 0) {
+            if (counter == 0) { // when counter == 0, we get the ID
                 packID = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-                counter++;
+                counter++; // incrementing so we don't grab ID again
                 MODE = GET_PAYLOAD;
                 // break;
-            } else if (counter == 1) {
-                if (packID == ID_LEDS_SET) {
-                    packLEDS = charIn;
+            } else if (counter == 1) { // this will be where the payload is that LEDS_SET needs
+                if (packID == ID_LEDS_SET) { // if the ID is ID_LEDS_SET
+                    packLEDS = charIn; // we want to store the values to set
                     packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                     MODE = GET_TAIL;
                    
                 } 
-                else if (packID == ID_LEDS_GET) {
+                else if (packID == ID_LEDS_GET) { // checking if the ID is to GET LED state ... Maybe could do this right when we get the ID
                    // if (packCHECKSUM == 0x83) {
                     ledsVal = LEDS_GET();
                     Protocol_SendMessage(0x02, ID_LEDS_STATE, &ledsVal);
-                    MODE = WAIT_FOR_HEAD;
+                    MODE = WAIT_FOR_HEAD; // we go back to head because thats the end of the packet
                    // }
                 }
 
