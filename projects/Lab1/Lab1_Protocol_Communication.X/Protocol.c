@@ -26,7 +26,7 @@ char dequeue_CB(struct CircleBuffer *buff);
 #define maxPAYLOADlength 128
 
 /* HERE ARE SOME TEST SUITES */
-#define ECHO_TEST
+//#define ECHO_TEST
 //#define BUFFER_TEST
 //#define PUTCHAR_TEST
 //#define SENDMSG_TEST
@@ -38,6 +38,13 @@ static int collision = 0;
 static int putCharFlag = 0;
 static int counter = 0;
 static int LEDSflag = 0;
+static unsigned char packHEAD = 0;
+static unsigned char packLENGTH = 0;
+static unsigned char packID = 0;
+static unsigned char packPAYLOAD = 0;
+static unsigned char packCHECKSUM = 0;
+static unsigned char packLEDS = 0;
+static unsigned char ledsVal;
 
 static struct CircleBuffer TXCB = {};
 static struct CircleBuffer RXCB = {};
@@ -83,14 +90,14 @@ int Protocol_Init(void) {
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     PutChar(HEAD);
-    unsigned char length = len + 1;
-    PutChar(length);
+    // unsigned char length = len + 1;
+    PutChar(len + 1);
     unsigned char checksum = ID;
     PutChar(ID);
     unsigned char i;
     //unsigned char *payload = (unsigned char*) Payload;
 
-    for (i = 0; i < length - 1; i++) {
+    for (i = 0; i < len - 1; i++) {
         PutChar(((unsigned char*) Payload)[i]);
         checksum = Protocol_CalcIterativeChecksum(((unsigned char*) Payload)[i], checksum);
     }
@@ -156,197 +163,101 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
     char *checksumError = "Checksums didn't match\n";
     char *tailError = "No tail was given\n";
 
+
     switch (MODE) {
         case WAIT_FOR_HEAD:
-            PACKET.packHEAD = 0;
-            PACKET.packLENGTH = 0;
-            PACKET.packID = 0;
-            PACKET.packPAYLOAD = 0;
-            PACKET.packCHECKSUM = 0;
+            packHEAD = 0;
+            packLENGTH = 0;
+            packID = 0;
+            packPAYLOAD = 0;
+            packCHECKSUM = 0;
             counter = 0;
+            ledsVal = 0;
             if (charIn == HEAD) {
                 MODE = GET_LENGTH;
             }
             break;
 
         case GET_LENGTH:
-            PACKET.packLENGTH = charIn;
+            packLENGTH = charIn;
             MODE = GET_PAYLOAD;
             break;
 
 
         case GET_PAYLOAD:
             if (counter == 0) {
-                PACKET.packID = charIn;
-                PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
+                packID = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 counter++;
                 MODE = GET_PAYLOAD;
-                break;
-            }
-            if (counter == 1) {
-                if (PACKET.packID == ID_LEDS_SET) {
-                    PACKET.packLEDS = charIn;
-                    PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
+                // break;
+            } else if (counter == 1) {
+                if (packID == ID_LEDS_SET) {
+                    packLEDS = charIn;
+                    packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                     MODE = GET_TAIL;
-                    break;
+                   
+                } 
+                else if (packID == ID_LEDS_GET) {
+                    ledsVal = LEDS_GET();
+                    Protocol_SendMessage(0x01, ID_LEDS_STATE, &ledsVal);
+                    MODE = WAIT_FOR_HEAD;
                 }
-                PACKET.packPAYLOAD = charIn;
-                PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
 
-                if (counter == (PACKET.packLENGTH - 1)) {
+            } else {
+                packPAYLOAD = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                MODE = GET_PAYLOAD;
+                if (counter == (packLENGTH - 1)) {
                     MODE = GET_TAIL;
                     //counter++;
-                    break;
-                }
+                } //break;
                 counter++;
-                MODE = GET_PAYLOAD;
-                break;
+
             }
-            PACKET.packPAYLOAD = charIn;
-            PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
-            //counter++;
-            if (counter == (PACKET.packLENGTH - 1)) {
-                //counter = 0;
-                //  LEDS_SET(charIn);
-                MODE = GET_TAIL;
-                break;
-            }
-            counter++;
-            MODE = GET_PAYLOAD;
             break;
 
         case GET_TAIL:
             if (charIn != TAIL) {
                 Protocol_SendDebugMessage(tailError);
                 MODE = WAIT_FOR_HEAD;
-                break;
-
-            }
-            PACKET.packTAIL = charIn;
-            MODE = COMPARE_CHECKSUMS;
-            break;
-
-        case COMPARE_CHECKSUMS:
-            if (PACKET.packCHECKSUM != charIn) {
-                Protocol_SendDebugMessage(checksumError);
-                MODE = COMPARE_CHECKSUMS;
-                break;
-            }
-
-            if (PACKET.packID == ID_LEDS_SET) {
-                LEDS_SET(PACKET.packLEDS);
-                MODE = WAIT_FOR_HEAD;
-                break;
-
-            }
-            if (PACKET.packID == ID_LEDS_GET) {
-                //LEDSflag = 1;
-                // char ledsVal = LEDS_GET();
-                Protocol_SendMessage(2, ID_LEDS_STATE, ((unsigned char*) LEDS_GET()));
-                MODE = WAIT_FOR_HEAD;
-                break;
+                //break;
 
             } else {
-                enqueue_CB(PACKET.packLENGTH, &RXCB);
-                enqueue_CB(PACKET.packID, &RXCB);
-                enqueue_CB(PACKET.packPAYLOAD, &RXCB);
-                MODE = WAIT_FOR_HEAD;
-                break;
-            }
-
-
-            /*
-            //LEDS_SET(0b11111111);
-            PACKET.packHEAD = 0;
-            PACKET.packLENGTH = 0;
-            PACKET.packID = 0;
-            PACKET.packPAYLOAD = 0;
-            PACKET.packCHECKSUM = 0;
-            counter = 0;
-            if (charIn == HEAD) {
-                MODE = GET_LENGTH;
-
-
-            }
-            break;
-
-        case GET_LENGTH:
-            //LEDS_SET(0b11110000);
-            PACKET.packLENGTH = charIn;
-            MODE = GET_PAYLOAD;
-            break;
-
-            //        case ID:
-            //            //LEDS_SET(0b10101010);
-            //            if (counter == 0) {
-            //              
-            //                PACKET.packID = charIn;
-            //                PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
-            //                MODE = GET_PAYLOAD;
-            //                //  break;
-            //            }
-            //            break;
-
-        case GET_PAYLOAD:
-            if (counter == 0) {
-                  PACKET.packID = charIn;
-            } //LEDS_SET(0b100000000);
-
-            PACKET.packPAYLOAD = charIn;
-            // PACKET.packID = charIn[0];
-            PACKET.packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, PACKET.packCHECKSUM);
-            counter++;
-            // break;
-            if (counter == PACKET.packLENGTH + 1) {
-                counter = 0;
-                // LEDS_SET(charIn);
-                MODE = GET_TAIL;
-                //   break;
-            }
-
-
-            break;
-
-        case GET_TAIL:
-
-            if (charIn == TAIL) {
+                // PACKET.packTAIL = charIn;
                 MODE = COMPARE_CHECKSUMS;
-
-            } else {
-                Protocol_SendDebugMessage(tailError);
-                MODE = WAIT_FOR_HEAD;
-
             }
             break;
 
         case COMPARE_CHECKSUMS:
-            if (PACKET.packCHECKSUM != charIn) {
+            if (packCHECKSUM != charIn) {
                 Protocol_SendDebugMessage(checksumError);
                 MODE = WAIT_FOR_HEAD;
 
-            }
+            } else if (packID == ID_LEDS_SET) {
+                LEDS_SET(packLEDS);
+                MODE = WAIT_FOR_HEAD;
+                //break;
 
-            if (PACKET.packID == ID_LEDS_SET) {
+            }
+//            else if (packID == ID_LEDS_GET) {
+//                //                LEDSflag = 1;
+//                //                // LEDS_SET(0xff);
+//                ledsVal = LEDS_GET();
+//                //                //packPAYLOAD = LEDS_GET();
+//                //               //Protocol_SendDebugMessage(LEDS_GET());
+//                Protocol_SendMessage(0x01, ID_LEDS_STATE, &ledsVal);
+//                MODE = WAIT_FOR_HEAD;
+//                //                //    break;
+
+             else {
+                enqueue_CB(packLENGTH, &RXCB);
+                enqueue_CB(packID, &RXCB);
+                enqueue_CB(packPAYLOAD, &RXCB);
                 MODE = WAIT_FOR_HEAD;
 
             }
-            if (PACKET.packID == ID_LEDS_GET) {
-                LEDSflag = 1;
-                // char ledsVal = LEDS_GET();
-                // Protocol_SendMessage(2, ID_LEDS_STATE, ((unsigned char)LEDS_GET()));
-                MODE = WAIT_FOR_HEAD;
-
-            } else {
-                enqueue_CB(PACKET.packLENGTH, &RXCB);
-                enqueue_CB(PACKET.packID, &RXCB);
-                enqueue_CB(PACKET.packPAYLOAD, &RXCB);
-                MODE = WAIT_FOR_HEAD;
-
-
-            }
-            // PACKET.packCHECKSUM = 0;
             break;
-             * */
 
     }
 
@@ -374,15 +285,17 @@ int PutChar(char ch) {
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     if (IFS0bits.U1RXIF == 1) {
         // while (U1STAbits.URXDA == 0);
-      //  while (1) {
-            Protocol_RunReceiveStateMachine(U1RXREG);
-            //        if (LEDSflag == 1) {
-            //            Protocol_SendMessage(2, ID_LEDS_STATE, ((unsigned char) LEDS_GET()));
-            //            LEDSflag = 0;
-       // }
-        IFS0bits.U1RXIF = 0;
-
+        //  while (1) {
+        Protocol_RunReceiveStateMachine(U1RXREG);
+        //   }
+        //     if (LEDSflag == 1) {
+        //       U1TXREG = LEDS_GET();
+        //Protocol_SendMessage(2, ID_LEDS_STATE, ((unsigned char) LEDS_GET()));
+        //     LEDSflag = 0;
     }
+    IFS0bits.U1RXIF = 0;
+
+
     if (IFS0bits.U1TXIF == 1) {
 
         if (putCharFlag == 0) {
