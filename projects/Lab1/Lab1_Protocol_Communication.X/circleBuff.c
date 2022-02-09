@@ -33,8 +33,8 @@ void enqueue_CB(char input, struct CircleBuffer *buff) { // write to CB
     }
 }
 
-char dequeue_CB(struct CircleBuffer *buff) { // read from CB
-    char temp = 0;
+unsigned char dequeue_CB(struct CircleBuffer *buff) { // read from CB
+    unsigned char temp = 0;
     if (!check_EmptyBuff(buff)) { // check buffer isn't empty, ie. if there is data to dequeue
         temp = buff->data[buff->head];
         buff->head = ((buff->head + 1) % MAX_BUFFER_LENGTH);

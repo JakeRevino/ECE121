@@ -8,17 +8,6 @@
 #include <MessageIDs.h>
 #include <circleBuff.h>
 
-/*
-//These are some function prototypes 
-void init_buff(struct CircleBuffer *buff);
-int check_EmptyBuff(struct CircleBuffer *buff);
-int check_FullBuff(struct CircleBuffer *buff);
-void enqueue_CB(unsigned char input, struct CircleBuffer *buff);
-char dequeue_CB(struct CircleBuffer *buff);
-//unsigned char checkSum(char * payload);
- * */
-
-
 /* Here are some global definitions */
 #define Fpb 40e6 
 #define desired_baud 115200
@@ -52,6 +41,7 @@ static unsigned char ledValue = 0;
 static struct CircleBuffer TXCB = {};
 static struct CircleBuffer RXCB = {};
 
+/*
 static struct {
     unsigned char packHEAD;
     unsigned char packLENGTH;
@@ -63,7 +53,7 @@ static struct {
     unsigned char packCHECKSUM;
     unsigned char packEND1;
     unsigned char packEND2;
-} PACKET;
+} PACKET; */
 
 typedef enum {
     WAIT_FOR_HEAD, GET_LENGTH, GET_ID, GET_PAYLOAD, GET_TAIL,
@@ -73,22 +63,30 @@ typedef enum {
 static states MODE = WAIT_FOR_HEAD;
 
 int Protocol_Init(void) {
-    U1STACLR = 0xff;
+    //U1STACLR = 0xff;
+    U1MODE = 0;
+    U1STA = 0;
     U1BRG = BaudRate;
-    IFS0bits.U1RXIF = 0;
-    IFS0bits.U1TXIF = 0;
-    U1MODEbits.PDSEL = 0; // sets 8-data and no parity
+    U1MODEbits.PDSEL = 00; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
-    U1MODEbits.UEN = 0; // enable UART
-    IPC6bits.U1IP = 1; // Interrupt protocol priority
-    IPC6bits.U1IS = 3; // Interrupt sub-protocol priority
-    IEC0bits.U1TXIE = 1;
-    U1STAbits.UTXISEL = 0;
-    U1STAbits.UTXEN = 1;
-    IEC0bits.U1RXIE = 1;
-    U1STAbits.URXISEL = 0;
-    U1STAbits.URXEN = 1;
+
     U1MODEbits.ON = 1; // Turn UART on
+    U1MODEbits.UARTEN = 1; // enable UART
+
+    U1STAbits.URXEN = 1;
+    U1STAbits.UTXEN = 1;
+
+    IEC0bits.U1TXIE = 1;
+    U1STAbits.UTXISEL = 0b10;
+    IFS0bits.U1TXIF = 0;
+
+    IEC0bits.U1RXIE = 1;
+    U1STAbits.URXISEL = 0b00;
+    IFS0bits.U1RXIF = 0;
+
+    IPC6bits.U1IP = 0b011; // Interrupt protocol priority
+    IPC6bits.U1IS = 0b01; // Interrupt sub-protocol priority
+    return SUCCESS;
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
