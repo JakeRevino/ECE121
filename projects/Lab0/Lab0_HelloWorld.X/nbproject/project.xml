@@ -15,6 +15,7 @@
             <sourceRootList>
                 <sourceRootElem>../../OneDrive/Desktop/ECE121/include</sourceRootElem>
                 <sourceRootElem>../../OneDrive/Desktop/ECE121/src</sourceRootElem>
+                <sourceRootElem>../../Lab1/Lab1_Protocol_Communication.X</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>
