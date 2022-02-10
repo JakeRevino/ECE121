@@ -36,11 +36,12 @@ static int NOT_BUSY;
 static unsigned char packHEAD;
 static unsigned char packLENGTH;
 static unsigned char packID;
-static unsigned char packPAYLOAD;
+static unsigned char packPAYLOAD[maxPAYLOADlength];
 static unsigned char packCHECKSUM;
 static unsigned char packLEDS;
 //static unsigned int ledsVal[2];
 static unsigned char ledValue;
+static int pongFlag;
 
 static struct CircleBuffer TXCB = {};
 static struct CircleBuffer RXCB = {};
@@ -186,6 +187,19 @@ unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char
 
 }
 
+void Configure_Pong(void* theArray) {
+    unsigned char* PONG = (unsigned char*) theArray;
+    unsigned int zero_Pos = ((unsigned int) PONG[0]) << 24;
+    unsigned int one_Pos = ((unsigned int) PONG[1]) << 16;
+    unsigned int two_Pos = ((unsigned int) PONG[2]) << 8;
+    unsigned int three_Pos = ((unsigned int) PONG[3]);
+    unsigned int divide = (zero_Pos | one_Pos | two_Pos | three_Pos) >> 1;
+    PONG[0] = (divide & 0xFF000000) >> 24;
+    PONG[1] = (divide & 0xFF0000) >> 16;
+    PONG[2] = (divide & 0xFF00) >> 8;
+    PONG[3] = (divide & 0xFF);
+}
+
 void Protocol_RunReceiveStateMachine(unsigned char charIn) {
     char *checksumError = "Checksums didn't match\n";
     char *tailError = "No tail was given\n";
@@ -205,7 +219,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 //            packHEAD = 0;
                 packLENGTH = 0;
                 packID = 0;
-                packPAYLOAD = 0;
+                // packPAYLOAD = 0;
                 packCHECKSUM = 0;
                 counter = 0;
                 ledValue = 0;
@@ -238,10 +252,24 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 packLEDS = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 MODE = GET_TAIL;
-            } else {
-                packPAYLOAD = charIn;
+            } else if (counter == 0 && (packID == ID_PING)) {
+                packPAYLOAD[counter] = charIn;
+                pongFlag = 1;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-                if (counter == packLENGTH + 1) {
+                counter++;
+            } else if (pongFlag == 1) {
+                packPAYLOAD[counter] = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                counter++;
+                if (counter == 4) {
+                    MODE = GET_TAIL;
+
+                }
+
+            } else {
+                packPAYLOAD[counter] = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                if (counter == packLENGTH - 1) {
                     MODE = GET_TAIL;
                 }
                 counter++;
@@ -276,10 +304,16 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 Protocol_SendMessage(2, ID_LEDS_STATE, &ledValue);
                 MODE = GET_END1; // we go back to head because thats the end of the packet
 
+            } else if (pongFlag == 1) {
+                Configure_Pong(packPAYLOAD);
+                Protocol_SendMessage(packLENGTH, ID_PONG, packPAYLOAD);
+                pongFlag = 0;
+                MODE = GET_END1;
+
             } else {
                 enqueue_CB(packLENGTH, &RXCB);
                 enqueue_CB(packID, &RXCB);
-                enqueue_CB(packPAYLOAD, &RXCB);
+                enqueue_CB(*packPAYLOAD, &RXCB);
                 MODE = GET_END1;
             }
             break;
@@ -397,7 +431,7 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
         IFS0bits.U1RXIF = 0;
         // while (1) {
         Protocol_RunReceiveStateMachine(U1RXREG);
-        //  }
+        // }
 
     }
     // IFS0bits.U1RXIF = 0;

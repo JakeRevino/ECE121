@@ -19,6 +19,7 @@
       <itemPath>Protocol.c</itemPath>
       <itemPath>circleBuff.c</itemPath>
       <itemPath>BOARD.c</itemPath>
+      <itemPath>Lab1_ProtocolComm_Main.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -26,7 +27,6 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
     <itemPath>Scratch.txt</itemPath>
-    <itemPath>Lab1_ProtocolComm_Main.c</itemPath>
   </logicalFolder>
   <sourceRootList>
     <Elem>../../OneDrive/Desktop/ECE121/include</Elem>
@@ -251,6 +251,7 @@
         <property key="UART1" value="true"/>
         <property key="UART2" value="true"/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>
