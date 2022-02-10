@@ -26,6 +26,7 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
     <itemPath>Scratch.txt</itemPath>
+    <itemPath>Lab1_ProtocolComm_Main.c</itemPath>
   </logicalFolder>
   <sourceRootList>
     <Elem>../../OneDrive/Desktop/ECE121/include</Elem>
@@ -212,6 +213,8 @@
         <property key="stack-smashing" value=""/>
         <property key="wpo-lto" value="false"/>
       </C32Global>
+      <item path="Lab1_ProtocolComm_Main.c" ex="true" overriding="false">
+      </item>
       <PICkit3PlatformTool>
         <property key="ADC 1" value="true"/>
         <property key="AutoSelectMemRanges" value="auto"/>

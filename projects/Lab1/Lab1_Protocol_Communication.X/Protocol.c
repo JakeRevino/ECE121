@@ -24,19 +24,23 @@
 //#define CHECKSUM_TEST
 //#define INT_ENDED_TEST
 
-static int collision = 0;
-static int putCharFlag = 0;
-static int counter = 0;
-static int LEDSflag = 0;
-static int clear = 0;
-static unsigned char packHEAD = 0;
-static unsigned char packLENGTH = 0;
-static unsigned char packID = 0;
-static unsigned char packPAYLOAD = 0;
-static unsigned char packCHECKSUM = 0;
-static unsigned char packLEDS = 0;
-static unsigned int ledsVal[2];
-static unsigned char ledValue = 0;
+static int collision;
+static int putCharFlag;
+static int counter;
+static int LEDSflag;
+static int clear;
+static int mutex;
+static int BUSY_TX;
+static int BUSY_RX;
+static int NOT_BUSY;
+static unsigned char packHEAD;
+static unsigned char packLENGTH;
+static unsigned char packID;
+static unsigned char packPAYLOAD;
+static unsigned char packCHECKSUM;
+static unsigned char packLEDS;
+//static unsigned int ledsVal[2];
+static unsigned char ledValue;
 
 static struct CircleBuffer TXCB = {};
 static struct CircleBuffer RXCB = {};
@@ -90,25 +94,28 @@ int Protocol_Init(void) {
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
-    unsigned char SCORED = 0;
+    unsigned char SCORED;
     SCORED = PutChar(HEAD);
     // unsigned char length = len + 1;
     if (SCORED == SUCCESS) {
         SCORED = PutChar(len);
     }
 
-    unsigned char checksum = Protocol_CalcIterativeChecksum(ID, checksum);
+    unsigned char checksum = 0;
+    checksum = Protocol_CalcIterativeChecksum(ID, checksum);
     if (SCORED == SUCCESS) {
         SCORED = PutChar(ID);
     }
     unsigned char i;
+    unsigned char * plchar = Payload;
     //unsigned char *payload = (unsigned char*) Payload;
 
     for (i = 0; i < len - 1; i++) {
         if (SCORED == SUCCESS) {
-            SCORED = PutChar(((unsigned char*) Payload)[i]);
+            SCORED = PutChar(*plchar);
         }
-        checksum = Protocol_CalcIterativeChecksum(((unsigned char*) Payload)[i], checksum);
+        checksum = Protocol_CalcIterativeChecksum(*plchar, checksum);
+        ++plchar;
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar(TAIL);
@@ -186,19 +193,28 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
     switch (MODE) {
         case WAIT_FOR_HEAD:
-            packHEAD = 0;
-            packLENGTH = 0;
-            packID = 0;
-            packPAYLOAD = 0;
-            packCHECKSUM = 0;
-            counter = 0;
-            ledValue = 0;
-            packLEDS = 0;
+            //            packHEAD = 0;
+            //            packLENGTH = 0;
+            //            packID = 0;
+            //            packPAYLOAD = 0;
+            //            packCHECKSUM = 0;
+            //            counter = 0;
+            //            ledValue = 0;
+            //            packLEDS = 0;
             if (charIn == HEAD) {
+                //            packHEAD = 0;
+                packLENGTH = 0;
+                packID = 0;
+                packPAYLOAD = 0;
+                packCHECKSUM = 0;
+                counter = 0;
+                ledValue = 0;
+                packLEDS = 0;
                 MODE = GET_LENGTH;
-            } else {
-                MODE = WAIT_FOR_HEAD;
             }
+            //   else {
+            //                MODE = WAIT_FOR_HEAD;
+            //            }
             break;
 
         case GET_LENGTH:
@@ -256,8 +272,8 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
             } else if (packID == ID_LEDS_GET) {
                 //                    //ledsVal[0] = PORTE;
-                ledValue = PORTE;
-                Protocol_SendMessage(0x02, ID_LEDS_STATE, &ledValue);
+                ledValue = LEDS_GET();
+                Protocol_SendMessage(2, ID_LEDS_STATE, &ledValue);
                 MODE = GET_END1; // we go back to head because thats the end of the packet
 
             } else {
@@ -388,10 +404,10 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
 
 
     if (IFS0bits.U1TXIF == 1) {
-
+        IFS0bits.U1TXIF = 0;
         if (putCharFlag == 0) {
             U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
-            IFS0bits.U1TXIF = 0;
+            // IFS0bits.U1TXIF = 0;
 
         } else {
             collision = 1;
