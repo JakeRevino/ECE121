@@ -24,70 +24,54 @@
 //#define CHECKSUM_TEST
 //#define INT_ENDED_TEST
 
+
+/* These are some static declarations used throughout the code*/
 static int collision;
 static int putCharFlag;
 static int counter;
-static int LEDSflag;
 static int clear;
-static int mutex;
-static int BUSY_TX;
-static int BUSY_RX;
-static int NOT_BUSY;
 static unsigned char packHEAD;
 static unsigned char packLENGTH;
 static unsigned char packID;
 static unsigned char packPAYLOAD[maxPAYLOADlength];
 static unsigned char packCHECKSUM;
 static unsigned char packLEDS;
-//static unsigned int ledsVal[2];
 static unsigned char ledValue;
 static int pongFlag;
 
+/* Initializing the 2 EMPTY TX & RX buffer */
 static struct CircleBuffer TXCB = {};
 static struct CircleBuffer RXCB = {};
 
-/*
-static struct {
-    unsigned char packHEAD;
-    unsigned char packLENGTH;
-    unsigned char packID;
-    unsigned char packLEDS;
-    unsigned char packPAYLOAD;
-    unsigned char tempPAYLOAD;
-    unsigned char packTAIL;
-    unsigned char packCHECKSUM;
-    unsigned char packEND1;
-    unsigned char packEND2;
-} PACKET; */
-
+/* These are the states in the RXSM */
 typedef enum {
     WAIT_FOR_HEAD, GET_LENGTH, GET_ID, GET_PAYLOAD, GET_TAIL,
     COMPARE_CHECKSUMS, DETERMINE_RESPONSE, GET_END1, GET_END2
 } states;
 
+/* Initializing the first state */
 static states MODE = WAIT_FOR_HEAD;
 
 int Protocol_Init(void) {
-    //U1STACLR = 0xff;
-    U1MODE = 0;
-    U1STA = 0;
-    U1BRG = BaudRate;
+    U1MODE = 0; // Clear mode register
+    U1STA = 0; // clear status register
+    U1BRG = BaudRate; // set the baud rate
     U1MODEbits.PDSEL = 00; // sets 8-data and no parity
     U1MODEbits.STSEL = 0; // sets 1 stop bit
 
     U1MODEbits.ON = 1; // Turn UART on
     U1MODEbits.UARTEN = 1; // enable UART
 
-    U1STAbits.URXEN = 1;
-    U1STAbits.UTXEN = 1;
+    U1STAbits.URXEN = 1; // enable RX
+    U1STAbits.UTXEN = 1; // enable TX
 
-    IEC0bits.U1TXIE = 1;
-    U1STAbits.UTXISEL = 0b10;
-    IFS0bits.U1TXIF = 0;
+    IEC0bits.U1TXIE = 1; // enable TX interrupts
+    U1STAbits.UTXISEL = 0b10; // set interrupt to generate when TX buffer becomes empty
+    IFS0bits.U1TXIF = 0; // clear TX interrupt flag
 
-    IEC0bits.U1RXIE = 1;
-    U1STAbits.URXISEL = 0b00;
-    IFS0bits.U1RXIF = 0;
+    IEC0bits.U1RXIE = 1; // enable RX interrupts
+    U1STAbits.URXISEL = 0b00; // set RX interrupts to generate when the RX buffer has at least 1 item
+    IFS0bits.U1RXIF = 0; // clear RX interrupt flag
 
     IPC6bits.U1IP = 0b011; // Interrupt protocol priority
     IPC6bits.U1IS = 0b01; // Interrupt sub-protocol priority
@@ -95,9 +79,8 @@ int Protocol_Init(void) {
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
-    unsigned char SCORED;
+    unsigned char SCORED; // this is being used as a check to make sure PutChar is successful
     SCORED = PutChar(HEAD);
-    // unsigned char length = len + 1;
     if (SCORED == SUCCESS) {
         SCORED = PutChar(len);
     }
@@ -109,9 +92,8 @@ int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     }
     unsigned char i;
     unsigned char * plchar = Payload;
-    //unsigned char *payload = (unsigned char*) Payload;
 
-    for (i = 0; i < len - 1; i++) {
+    for (i = 0; i < len - 1; i++) { // len -1 because the lenght given includes the ID
         if (SCORED == SUCCESS) {
             SCORED = PutChar(*plchar);
         }
@@ -142,9 +124,6 @@ unsigned char Protocol_ReadNextID(void) {
 }
 
 int Protocol_GetPayload(void* payload) {
-    //    unsigned char *Payload = (unsigned char*) payload;
-    //    PACKET.packPAYLOAD = *Payload;
-    //    return SUCCESS;
     /* takes in memory location of the payload */
 }
 
@@ -161,7 +140,7 @@ char Protocol_IsQueueFull(void) {
 }
 
 char Protocol_IsError(void) {
-    if (U1STAbits.PERR | U1STAbits.FERR | U1STAbits.OERR) {
+    if (U1STAbits.PERR | U1STAbits.FERR | U1STAbits.OERR) { // Checking for Parity Error, Framing Error, and Overflow Error
         return TRUE;
     }
 }
@@ -172,7 +151,6 @@ unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
 }
 
 unsigned int Protocol_IntEndednessConversion(unsigned int inVariable) {
-    /* about 6 lines */
     inVariable = ((inVariable >> 24) & 0xFF) | ((inVariable << 8) & 0xFF0000)
             | ((inVariable >> 8) & 0xFF00) | ((inVariable << 24) & 0xFF000000);
     return inVariable;
@@ -183,18 +161,16 @@ unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char
     curChecksum = (curChecksum >> 1) + (curChecksum << 7);
     curChecksum = curChecksum + charIn;
     return curChecksum;
-
-
 }
 
 void Configure_Pong(void* theArray) {
     unsigned char* PONG = (unsigned char*) theArray;
-    unsigned int zero_Pos = ((unsigned int) PONG[0]) << 24;
+    unsigned int zero_Pos = ((unsigned int) PONG[0]) << 24; // Convert endedness
     unsigned int one_Pos = ((unsigned int) PONG[1]) << 16;
     unsigned int two_Pos = ((unsigned int) PONG[2]) << 8;
     unsigned int three_Pos = ((unsigned int) PONG[3]);
-    unsigned int divide = (zero_Pos | one_Pos | two_Pos | three_Pos) >> 1;
-    PONG[0] = (divide & 0xFF000000) >> 24;
+    unsigned int divide = (zero_Pos | one_Pos | two_Pos | three_Pos) >> 1; // divide by 2
+    PONG[0] = (divide & 0xFF000000) >> 24; // convert endedness again
     PONG[1] = (divide & 0xFF0000) >> 16;
     PONG[2] = (divide & 0xFF00) >> 8;
     PONG[3] = (divide & 0xFF);
@@ -207,40 +183,26 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
     switch (MODE) {
         case WAIT_FOR_HEAD:
-            //            packHEAD = 0;
-            //            packLENGTH = 0;
-            //            packID = 0;
-            //            packPAYLOAD = 0;
-            //            packCHECKSUM = 0;
-            //            counter = 0;
-            //            ledValue = 0;
-            //            packLEDS = 0;
             if (charIn == HEAD) {
-                //            packHEAD = 0;
-                packLENGTH = 0;
+                packLENGTH = 0; // resetting the variables used
                 packID = 0;
-                // packPAYLOAD = 0;
                 packCHECKSUM = 0;
                 counter = 0;
                 ledValue = 0;
                 packLEDS = 0;
                 MODE = GET_LENGTH;
             }
-            //   else {
-            //                MODE = WAIT_FOR_HEAD;
-            //            }
             break;
 
         case GET_LENGTH:
-            packLENGTH = charIn;
+            packLENGTH = charIn; // save the length
             MODE = GET_ID;
             break;
 
         case GET_ID:
-            //            if (counter == 0) { // when counter == 0, we get the ID
-            packID = charIn;
+            packID = charIn; // save the message ID
             packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-            if (packID == ID_LEDS_GET) {
+            if (packID == ID_LEDS_GET) { // check for special case that has no payload
                 MODE = GET_TAIL;
             } else {
                 MODE = GET_PAYLOAD;
@@ -248,197 +210,113 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             break;
 
         case GET_PAYLOAD:
-            if ((packID == ID_LEDS_SET) && (counter == 0)) {
-                packLEDS = charIn;
+            if ((packID == ID_LEDS_SET) && (counter == 0)) { // ID_LEDS_SET has only 1 item in payload
+                packLEDS = charIn; // save the item to be used later
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 MODE = GET_TAIL;
-            } else if (counter == 0 && (packID == ID_PING)) {
-                packPAYLOAD[counter] = charIn;
-                pongFlag = 1;
+            } else if ((packID == ID_PING) && (counter == 0)) { // check if the message is a Ping
+                packPAYLOAD[counter] = charIn; // save charIn to the payload
+                pongFlag = 1; // set flag for Pong
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 counter++;
             } else if (pongFlag == 1) {
                 packPAYLOAD[counter] = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 counter++;
-                if (counter == 4) {
+                if (counter == 4) { // 4 = length of PING payload - 1
                     MODE = GET_TAIL;
-
                 }
-
-            } else {
+            } else { // if ID is not some special case, process payload 
                 packPAYLOAD[counter] = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-                if (counter == packLENGTH - 1) {
+                if (counter == packLENGTH - 1) { // packLENGTH - 1 because we already processed the ID
                     MODE = GET_TAIL;
                 }
                 counter++;
-                MODE = GET_PAYLOAD;
+                MODE = GET_PAYLOAD; // re-process payload until 1 of the above cases are met
             }
             break;
 
         case GET_TAIL:
-            if (charIn != TAIL) {
+            if (charIn != TAIL) { // this is making sure we are getting a tail
                 Protocol_SendDebugMessage(tailError);
                 MODE = WAIT_FOR_HEAD;
-                //break;
-
             } else {
-                // PACKET.packTAIL = charIn;
-                MODE = COMPARE_CHECKSUMS;
+                MODE = COMPARE_CHECKSUMS; // we got a tail so now we need to make sure checksum is correct
             }
             break;
 
         case COMPARE_CHECKSUMS:
-            if (packCHECKSUM != charIn) {
+            if (packCHECKSUM != charIn) { // send an error message if checksums don't match
                 Protocol_SendDebugMessage(checksumError);
                 MODE = WAIT_FOR_HEAD;
 
-            } else if (packID == ID_LEDS_SET) {
+            } else if (packID == ID_LEDS_SET) { // setting the LEDS
                 LEDS_SET(packLEDS);
-                MODE = GET_END1;
+                // MODE = GET_END1;
+                MODE = WAIT_FOR_HEAD;
 
-            } else if (packID == ID_LEDS_GET) {
-                //                    //ledsVal[0] = PORTE;
+            } else if (packID == ID_LEDS_GET) { // getting the status of the LEDS
                 ledValue = LEDS_GET();
                 Protocol_SendMessage(2, ID_LEDS_STATE, &ledValue);
-                MODE = GET_END1; // we go back to head because thats the end of the packet
+                //MODE = GET_END1; 
+                MODE = WAIT_FOR_HEAD; // we go back to head because thats the end of the packet
 
-            } else if (pongFlag == 1) {
-                Configure_Pong(packPAYLOAD);
+            } else if (pongFlag == 1) { // response to ID_PING
+                Configure_Pong(packPAYLOAD); // convert --> shift --> convert
                 Protocol_SendMessage(packLENGTH, ID_PONG, packPAYLOAD);
                 pongFlag = 0;
-                MODE = GET_END1;
+                //MODE = GET_END1;
+                MODE = WAIT_FOR_HEAD;
 
             } else {
-                enqueue_CB(packLENGTH, &RXCB);
+                enqueue_CB(packLENGTH, &RXCB); // Putting the important parts of packet into RXCB
                 enqueue_CB(packID, &RXCB);
                 enqueue_CB(*packPAYLOAD, &RXCB);
-                MODE = GET_END1;
+                //MODE = GET_END1;
+                MODE = WAIT_FOR_HEAD;
             }
             break;
 
-        case GET_END1:
-            MODE = GET_END2;
-            break;
+            /*        case GET_END1:
+                        MODE = GET_END2;
+                        break;
 
-        case GET_END2:
-            MODE = WAIT_FOR_HEAD;
-            break;
-            /*                            counter++; // incrementing so we don't grab ID again
-                                        MODE = GET_PAYLOAD;
-                                        // break;
-                                    } else if (counter == 1) { // this will be where the payload is that LEDS_SET needs
-                                        if (packID == ID_LEDS_SET) { // if the ID is ID_LEDS_SET
-                                            packLEDS = charIn; // we want to store the values to set
-                                            packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-                                            MODE = GET_TAIL;
-            
-                                        } else if (packID == ID_LEDS_GET) { // checking if the ID is to GET LED state ... Maybe could do this right when we get the ID
-                                            // if (packCHECKSUM == 0x83) {
-                                            //ledsVal[0] = PORTE;
-                                            unsigned char ledValue = PORTE;
-                                            Protocol_SendMessage(0x02, ID_LEDS_STATE, &ledValue);
-                                            MODE = WAIT_FOR_HEAD; // we go back to head because thats the end of the packet
-                                            // }
-                                        }
-            
-                                    } else {
-                                        packPAYLOAD = charIn;
-                                        packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-                                        MODE = GET_PAYLOAD;
-                                        if (counter == (packLENGTH - 1)) {
-                                            MODE = GET_TAIL;
-                                            //counter++;
-                                        } //break;
-                                        counter++;
-            
-                                    }
-                                    break;
-            
-                                case GET_TAIL:
-                                    if (charIn != TAIL) {
-                                        Protocol_SendDebugMessage(tailError);
-                                        MODE = WAIT_FOR_HEAD;
-                                        //break;
-            
-                                    } else {
-                                        // PACKET.packTAIL = charIn;
-                                        MODE = COMPARE_CHECKSUMS;
-                                    }
-                                    break;
-            
-                                case COMPARE_CHECKSUMS:
-                                    if (packCHECKSUM != charIn) {
-                                        Protocol_SendDebugMessage(checksumError);
-                                        MODE = WAIT_FOR_HEAD;
-            
-                                    } else if (packID == ID_LEDS_SET) {
-                                        LEDS_SET(packLEDS);
-                                        MODE = WAIT_FOR_HEAD;
-                                        //break;
-            
-                                    }//            else if (packID == ID_LEDS_GET) {
-                                        //                //                LEDSflag = 1;
-                                        //                //                // LEDS_SET(0xff);
-                                        //                ledsVal = LEDS_GET();
-                                        //                //                //packPAYLOAD = LEDS_GET();
-                                        //                //               //Protocol_SendDebugMessage(LEDS_GET());
-                                        //                Protocol_SendMessage(0x01, ID_LEDS_STATE, &ledsVal);
-                                        //                MODE = WAIT_FOR_HEAD;
-                                        //                //                //    break;
-            
-                                    else {
-                                        enqueue_CB(packLENGTH, &RXCB);
-                                        enqueue_CB(packID, &RXCB);
-                                        enqueue_CB(packPAYLOAD, &RXCB);
-                                        MODE = WAIT_FOR_HEAD;
-            
-                                    }
-                                    break; */
-
+                    case GET_END2:
+                        MODE = WAIT_FOR_HEAD;
+                        break; */
     }
-
 }
 
 int PutChar(char ch) {
     if (check_FullBuff(&TXCB)) { // check if the buffer is full
-        //  LEDS_SET(0xff);
         clear = 0;
         return ERROR;
     }
     putCharFlag = 1;
     enqueue_CB(ch, &TXCB); // put the char on the buffer
-
     putCharFlag = 0;
 
     while (!U1STAbits.TRMT);
 
-    if ((U1STAbits.TRMT == 1) | (collision == 1)) {
+    if ((U1STAbits.TRMT == 1) | (collision == 1)) { // TX shift reg is empty (last TX is complete)
         collision = 0;
         IFS0bits.U1TXIF = 1;
         clear = 1;
-
     }
-
     return SUCCESS;
 }
 
 void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
-    if (IFS0bits.U1RXIF == 1) {
-        // while (U1STAbits.URXDA == 0);
-        //    
-        IFS0bits.U1RXIF = 0;
+    if (IFS0bits.U1RXIF == 1) { // check if we're here because RX interrupt
+        IFS0bits.U1RXIF = 0; // reset the flag
         // while (1) {
-        Protocol_RunReceiveStateMachine(U1RXREG);
+        Protocol_RunReceiveStateMachine(U1RXREG); // run RXSM
         // }
-
     }
     // IFS0bits.U1RXIF = 0;
-
-
-    if (IFS0bits.U1TXIF == 1) {
-        IFS0bits.U1TXIF = 0;
+    if (IFS0bits.U1TXIF == 1) { // check if we're here because TX interrupt
+        IFS0bits.U1TXIF = 0; // reset the flag
         if (putCharFlag == 0) {
             U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
             // IFS0bits.U1TXIF = 0;
@@ -460,9 +338,6 @@ int main() {
     init_buff(&TXCB);
     init_buff(&RXCB);
     LEDS_INIT();
-    // while (1); // {
-    //Protocol_SendDebugMessage(test_char);
-
     // while (1);
 #ifdef PUTCHAR_TEST
     int i = 0;
