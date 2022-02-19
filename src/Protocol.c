@@ -162,6 +162,7 @@ char Protocol_IsError(void) {
 }
 
 unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
+
     /* 1 line */
 
 }
@@ -334,7 +335,9 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     if (IFS0bits.U1TXIF == 1) { // check if we're here because TX interrupt
         IFS0bits.U1TXIF = 0; // reset the flag
         if (putCharFlag == 0) {
+            if (!check_EmptyBuff(&TXCB)) {
             U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
+            }
             // IFS0bits.U1TXIF = 0;
 
         } else {

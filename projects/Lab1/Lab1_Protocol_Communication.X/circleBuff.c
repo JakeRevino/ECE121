@@ -3,7 +3,6 @@
 #include <circleBuff.h>
 #include "BOARD.h"
 
-
 void init_buff(struct CircleBuffer *buff) { // init the buffer
     buff->head = 0; // set head to 0
     buff->tail = 0; // set tail to 0
@@ -12,17 +11,21 @@ void init_buff(struct CircleBuffer *buff) { // init the buffer
 }
 
 int check_EmptyBuff(struct CircleBuffer *buff) {
-    if (buff->head == buff->tail) { // if head == tail then its empty
+    if (buff->size <= 0) {
+        //    if (buff->head == buff->tail) { // if head == tail then its empty
         return 1;
+
     } else
         return 0;
 }
 
 int check_FullBuff(struct CircleBuffer *buff) {
-    if (buff->head == ((buff->tail + 1) % MAX_BUFFER_LENGTH)) {
+    // if (buff->head == ((buff->tail + 1) % MAX_BUFFER_LENGTH)) {
+    if (buff->size >= MAX_BUFFER_LENGTH - 1) {
         return 1;
-    } else
+    } else {
         return 0;
+    }
 }
 
 void enqueue_CB(char input, struct CircleBuffer *buff) { // write to CB
