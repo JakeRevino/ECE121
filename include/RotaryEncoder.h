@@ -10,6 +10,8 @@
 #define ENCODER_BLOCKING_MODE 0
 #define ENCODER_INTERRUPT_MODE 1
 
+#define CLOCK_5MHZ 0xF00D
+
 /*******************************************************************************
  * PUBLIC FUNCTIONS                                                           *
  ******************************************************************************/
@@ -29,4 +31,3 @@ unsigned short RotaryEncoder_ReadRawAngle(void);
 
 
 #endif	/* ROTARYENCODER_H */
-

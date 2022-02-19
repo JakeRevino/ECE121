@@ -1,12 +1,12 @@
-#include <BOARD.h>
+#include "BOARD.h"
 #include <xc.h>
-#include <Protocol.h>
+#include "Protocol.h"
 #include <sys/attribs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <MessageIDs.h>
-#include <circleBuff.h>
+#include "MessageIDs.h"
+#include "circleBuff.h"
 
 /* Here are some global definitions */
 #define Fpb 40e6 
@@ -73,22 +73,25 @@ int Protocol_Init(void) {
     U1STAbits.URXISEL = 0b00; // set RX interrupts to generate when the RX buffer has at least 1 item
     IFS0bits.U1RXIF = 0; // clear RX interrupt flag
 
-    IPC6bits.U1IP = 0b011; // Interrupt protocol priority
-    IPC6bits.U1IS = 0b01; // Interrupt sub-protocol priority
+    IPC6bits.U1IP = 7; // Interrupt protocol priority
+    IPC6bits.U1IS = 0b010; // Interrupt sub-protocol priority
     return SUCCESS;
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     unsigned char SCORED; // this is being used as a check to make sure PutChar is successful
     SCORED = PutChar(HEAD);
+   // printf("%X", HEAD);
     if (SCORED == SUCCESS) {
         SCORED = PutChar(len);
+     //   printf("%X", len);
     }
 
     unsigned char checksum = 0;
     checksum = Protocol_CalcIterativeChecksum(ID, checksum);
     if (SCORED == SUCCESS) {
         SCORED = PutChar(ID);
+       // printf("%X", ID);
     }
     unsigned char i;
     unsigned char * plchar = Payload;
@@ -96,27 +99,40 @@ int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     for (i = 0; i < len - 1; i++) { // len -1 because the lenght given includes the ID
         if (SCORED == SUCCESS) {
             SCORED = PutChar(*plchar);
+         //   printf("%X", *plchar);
         }
         checksum = Protocol_CalcIterativeChecksum(*plchar, checksum);
         ++plchar;
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar(TAIL);
+       // printf("%X", TAIL);
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar(checksum);
+      //  printf("%X", checksum);
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar('\r');
+        //printf("%X", '\r');
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar('\n');
+       // printf("%X", '\n');
     }
     return SUCCESS;
 }
 
 int Protocol_SendDebugMessage(char *Message) {
-    return Protocol_SendMessage(strlen(Message), ID_DEBUG, Message);
+    unsigned int x;
+    unsigned char len = strlen(Message);
+    for (x = 0; x <= len; x++) {
+        packPAYLOAD[x] = Message[x];
+    }
+  //  printf("%c", packPAYLOAD[1]);
+    Protocol_SendMessage(len + 1, ID_DEBUG, packPAYLOAD);
+    return SUCCESS;
+    // return Protocol_SendMessage(strlen(Message), ID_DEBUG, Message);
 }
 
 unsigned char Protocol_ReadNextID(void) {
@@ -297,7 +313,7 @@ int PutChar(char ch) {
     enqueue_CB(ch, &TXCB); // put the char on the buffer
     putCharFlag = 0;
 
-    while (!U1STAbits.TRMT);
+    while (U1STAbits.TRMT == 0);
 
     if ((U1STAbits.TRMT == 1) | (collision == 1)) { // TX shift reg is empty (last TX is complete)
         collision = 0;
@@ -327,9 +343,9 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     }
 }
 
-#ifdef TESTHARNESS
+#ifdef PROTOCOL_TESTHARNESS
 
-int main() {
+int main(void) {
 
     unsigned char test_char[] = "Please work";
     BOARD_Init();

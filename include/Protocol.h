@@ -141,6 +141,15 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn);
  * @author mdunne */
 int PutChar(char ch);
 
+/**
+ * @Function void Configure_Pong(void* theArray)
+ * @param theArray, the Payload from an ID_PING message
+ * @return None
+ * @brief takes in an unsigned integer value, converts endedness,
+ * divides by 2 (>> 1), converts endedness again
+ * @author jrevino */
+void Configure_Pong(void* theArray);
+
 
 /**
  * This macro initializes all LEDs for use. It enables the proper pins as outputs and also turns all
