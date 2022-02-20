@@ -306,7 +306,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 }
 
 int PutChar(char ch) {
-    if (check_FullBuff(&TXCB)) { // check if the buffer is full
+    if (check_FullBuff(&TXCB) == 1) { // check if the buffer is full
         clear = 0;
         return ERROR;
     }
@@ -335,7 +335,7 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
     if (IFS0bits.U1TXIF == 1) { // check if we're here because TX interrupt
         IFS0bits.U1TXIF = 0; // reset the flag
         if (putCharFlag == 0) {
-            if (!check_EmptyBuff(&TXCB)) {
+            if (check_EmptyBuff(&TXCB) == 0) {
             U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
             }
             // IFS0bits.U1TXIF = 0;

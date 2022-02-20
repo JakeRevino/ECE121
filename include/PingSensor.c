@@ -48,7 +48,7 @@ int PingSensor_Init(void) {
     T2CON = 0x0; // clear control registers
     T2CONbits.TCKPS = 3; // set pre-scaler
     TMR2 = 0; // set current value to zeo
-    PR2 = 0xFFFF; // Set period register
+    PR2 = 0xFFFFFF; // Set period register
 
 
     /* CONFIGURE INPUT CAPTURE */
@@ -96,7 +96,7 @@ int main(void) {
 
     union {
         unsigned int i;
-        char word[4];
+        char word[5];
     } variable;
     //    
     //    temp[0] = word[3];
@@ -109,8 +109,8 @@ int main(void) {
         //char *message = "sup";
         // Protocol_SendDebugMessage(variable.word);
         variable.i = Protocol_IntEndednessConversion(variable.i);
-        Protocol_SendMessage(0x04, ID_PING_DISTANCE, &variable.word);
-        for (int i = 0; i < 400; i++) { // delay for at least 10us before resetting the interrupt flag
+        Protocol_SendMessage(0x05, ID_PING_DISTANCE, &(variable.word));
+        for (int i = 0; i < 4000; i++) { // delay for at least 10us before resetting the interrupt flag
             asm(" nop ");
             ///    IFS0bits.T4IF = 0;
 
@@ -118,7 +118,7 @@ int main(void) {
         //  IFS0bits.IC3IF = 1;
         // theData.message[0] = PingSensor_GetDistance();
         //Protocol_SendMessage(0x02, ID_DEBUG, &distance);
-        ;
+        
     }
     return 0;
 
@@ -167,23 +167,23 @@ void __ISR(_INPUT_CAPTURE_3_VECTOR) __IC3Interrupt(void) {
                     LEDS_SET(0x1111);
                     IC_FallingEdge = (0xFFFF & IC3BUF);
                     if (IC_FallingEdge < IC_RisingEdge) {
-                        dT = IC_FallingEdge + IC_RisingEdge;
+                        dT = 0xFFFF - IC_FallingEdge + IC_RisingEdge;
                     } else {
                         LEDS_SET(0x1001);
                         dT = IC_FallingEdge - IC_RisingEdge;
-                         }
-
-                        // distance = Protocol_IntEndednessConversion(TEMP_distance);
-
-                        //Data.message[0] = PingSensor_GetDistance();
-                        //  Protocol_SendDebugMessage((unsigned char*)distance);
-
                     }
-                    distance = (34 * dT) / (1000);
-                    state = RISING;
-                    break;
+
+                    // distance = Protocol_IntEndednessConversion(TEMP_distance);
+
+                    //Data.message[0] = PingSensor_GetDistance();
+                    //  Protocol_SendDebugMessage((unsigned char*)distance);
 
                 }
-        }
+                distance = ((340 * dT) / (10000));
+                state = RISING;
+                break;
 
+        }
     }
+
+}
