@@ -5,6 +5,9 @@
 #include "BOARD.h"
 #include "MessageIDs.h"
 
+
+//#define PING_SENSOR_TEST
+
 static unsigned int IC_RisingEdge;
 static unsigned int IC_FallingEdge;
 static unsigned int dT;
@@ -83,6 +86,8 @@ unsigned short PingSensor_GetDistance(void) {
 
 }
 
+#ifdef PING_SENSOR_TEST
+
 int main(void) {
     PingSensor_Init();
     BOARD_Init();
@@ -118,11 +123,12 @@ int main(void) {
         //  IFS0bits.IC3IF = 1;
         // theData.message[0] = PingSensor_GetDistance();
         //Protocol_SendMessage(0x02, ID_DEBUG, &distance);
-        
+
     }
     return 0;
 
 }
+#endif
 
 void __ISR(_TIMER_4_VECTOR)Timer4IntHandlr(void) {
     if (IFS0bits.T4IF == 1) {

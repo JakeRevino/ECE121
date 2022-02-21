@@ -5,6 +5,8 @@
 #include "Protocol.h"
 #include <sys/attribs.h>
 
+#define RC_SERVO_TEST
+
 
 
 
@@ -17,6 +19,8 @@
 /*******************************************************************************
  * PUBLIC FUNCTIONS                                                           *
  ******************************************************************************/
+static unsigned int tickPulse;
+static unsigned char* RC_PAYLOAD;
 
 /**
  * @Function RCServo_Init(void)
@@ -28,26 +32,26 @@ int RCServo_Init(void) {
     T3CON = 0x0; // clear control registers
     T3CONbits.TCKPS = 6; // set pre-scaler 1:64
     TMR3 = 0; // set current value to zero
-    PR3 = 31249; // Set period register for 50ms roll-over
+    PR3 = 31250; // Set period register for 50ms roll-over
 
     /* set up timer3 interrupts */
     IPC3bits.T3IP = 5; // timer 3 interrupt priority
     IPC3bits.T3IS = 3; // T3 subpriority
     IFS0bits.T3IF = 0; // clear interrupt flag
     IEC0bits.T3IE = 1; // enable timer 3 interrupts
-    
+
     /* CONFIGURE OUTPUT COMPARE MODULE */
-    OC3CON = 0x0;
-    OC3CONbits.OCTSEL = 0; // Output compare. This slaves timer2
-    OC3CONbits.OCM = 6;
-    OC3RS = 1249;   
-    
-    /* OUTPUT COMPARE INTERRUPTS */
-    
-    
-    
-     T3CONbits.ON = 1; // enable timer3
-     OC3CONbits.ON = 1; // enable 
+    OC3CON = 0x0; // clear and disable control register
+    OC3CONbits.OCTSEL = 1; // Output compare. This slaves timer3
+    OC3CONbits.OCM = 6; // PWM mode with Fault pin disabled
+    //OC3RS = 1249; // this sets a 2% duty cycle 
+    OC3R = RC_SERVO_CENTER_PULSE; // this sets initial duty cycle
+   // OC3RS = 1100;
+
+    T3CONbits.ON = 1; // enable timer3
+    OC3CONbits.ON = 1; // enable OC3
+
+    return SUCCESS;
 
 }
 
@@ -58,6 +62,18 @@ int RCServo_Init(void) {
  * @brief takes in microsecond count, converts to ticks and updates the internal variables
  * @warning This will update the timing for the next pulse, not the current one */
 int RCServo_SetPulse(unsigned int inPulse) {
+    unsigned int outPulse = 0;
+    // unsigned int temp = inPulse;
+    outPulse = (inPulse * 625000); // [us]*[625000 ticks/s]
+    outPulse = (outPulse / 1000000); // divide by 1 million to get rid of seconds
+    if (outPulse >= RC_SERVO_MAX_PULSE) {
+        tickPulse = RC_SERVO_MAX_PULSE;
+    } else if (outPulse <= RC_SERVO_MIN_PULSE) {
+        tickPulse = RC_SERVO_MIN_PULSE;
+    } else {
+        tickPulse = outPulse;
+    }
+    return SUCCESS;
 
 }
 
@@ -78,15 +94,34 @@ unsigned int RCServo_GetRawTicks(void) {
 
 }
 
-//int main(void) {
-//
-//
-//    return 0;
-//}
+#ifdef RC_SERVO_TEST
 
-void __ISR(_OUTPUT_COMPARE_3_VECTOR)__OC3Interrupt(void) {
+int main(void) {
+    RCServo_Init();
+    LEDS_INIT();
+    BOARD_Init();
+    Protocol_Init();
 
-/******thtth*/
+    while (1) {
+        
+        if (Protocol_IsMessageAvailable() == TRUE) {
+            if (ID_COMMAND_SERVO_PULSE == Protocol_ReadNextID()) {
+                Protocol_GetPayload(RC_PAYLOAD);
+                RCServo_SetPulse((unsigned int)RC_PAYLOAD);
+            }
+           // LEDS_SET(0xf);
+        }
+    }
+
+    return 0;
+}
+#endif
+
+void __ISR(_TIMER_3_VECTOR, ipl3auto) T3_IntHandler(void) {
+
+    OC3RS = tickPulse;
+    LEDS_SET(0b1001001);
+    IFS0bits.T3IF = 0;
 
 
 }

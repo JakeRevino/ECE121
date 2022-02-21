@@ -10,6 +10,8 @@
 #include <proc/p32mx340f512h.h>
 #include "FreeRunningTimer.h"
 
+//#define FRT_TEST
+
 
 unsigned int TIME_MILLIS;
 unsigned int TIME_MICRO;
@@ -52,54 +54,56 @@ unsigned int FreeRunningTimer_GetMicroSeconds(void) {
     return TIME_MICRO;
 }
 
-//int main() {
-//    FreeRunningTimer_Init();
-//    BOARD_Init();
-//    Protocol_Init();
-//    LEDS_INIT();
-//    TRISDbits.TRISD0 = 0; // Configure as output
-//    TRISEbits.TRISE0 = 0;
+#ifdef FRT_TEST
+int main() {
+    FreeRunningTimer_Init();
+    BOARD_Init();
+    Protocol_Init();
+    LEDS_INIT();
+    TRISDbits.TRISD0 = 0; // Configure as output
+    TRISEbits.TRISE0 = 0;
+
+//    char message[] = "HELLO WORLD";
 //
-////    char message[] = "HELLO WORLD";
-////
-////    unsigned int targetMilli;
-////    unsigned int targetMicro;
-////    targetMilli = (FreeRunningTimer_GetMilliSeconds() + (25000 / 1000));
-////    targetMicro = (FreeRunningTimer_GetMicroSeconds() % 1000) + (25000 % 1000);
-////    int counter;
-////    //unsigned int 
-////    while (1) {
-////        //        printf("targetMilli: %d\r\n", TIME_MILLIS);
-////        //        printf("targetMico: %d\r\n", TIME_MICRO);
-////        printf("targetMilli: %d\r\n", targetMilli);
-////        printf("targetMico: %d\r\n", targetMicro);
-////
-////        if ((FreeRunningTimer_GetMilliSeconds() >= targetMilli) && (FreeRunningTimer_GetMicroSeconds() % 1000 >= targetMicro)) {
-////            counter++;
-////            if (counter % 2 == 0) {
-////                LATE = 1;
-////            } else if (counter % 2 == 1) {
-////                LATE = 0;
-////            }
-////            // Protocol_SendDebugMessage(message);
-////
-////
-////            //            for (int i = 0; i < 24000; i++) {
-////            //                asm(" nop ");
-////            //            }
-////            // LATE = !blink;
-////        }
-////        // do the thing
-////        // char msg[] = "Work mother fucker";
-////        // Protocol_SendDebugMessage(msg);
-////        //Protocol_SendMessage(0x06, ID_DEBUG, "Hello");
-////        // targetMilli = (FreeRunningTimer_GetMilliSeconds() + (2500 / 1000));
-////        // targetMicro = (FreeRunningTimer_GetMicroSeconds() % 1000) + (2500 % 1000);
-////    }
-//    // while (1);
-//   // BOARD_End();
-//    return 1;
-//}
+//    unsigned int targetMilli;
+//    unsigned int targetMicro;
+//    targetMilli = (FreeRunningTimer_GetMilliSeconds() + (25000 / 1000));
+//    targetMicro = (FreeRunningTimer_GetMicroSeconds() % 1000) + (25000 % 1000);
+//    int counter;
+//    //unsigned int 
+//    while (1) {
+//        //        printf("targetMilli: %d\r\n", TIME_MILLIS);
+//        //        printf("targetMico: %d\r\n", TIME_MICRO);
+//        printf("targetMilli: %d\r\n", targetMilli);
+//        printf("targetMico: %d\r\n", targetMicro);
+//
+//        if ((FreeRunningTimer_GetMilliSeconds() >= targetMilli) && (FreeRunningTimer_GetMicroSeconds() % 1000 >= targetMicro)) {
+//            counter++;
+//            if (counter % 2 == 0) {
+//                LATE = 1;
+//            } else if (counter % 2 == 1) {
+//                LATE = 0;
+//            }
+//            // Protocol_SendDebugMessage(message);
+//
+//
+//            //            for (int i = 0; i < 24000; i++) {
+//            //                asm(" nop ");
+//            //            }
+//            // LATE = !blink;
+//        }
+//        // do the thing
+//        // char msg[] = "Work mother fucker";
+//        // Protocol_SendDebugMessage(msg);
+//        //Protocol_SendMessage(0x06, ID_DEBUG, "Hello");
+//        // targetMilli = (FreeRunningTimer_GetMilliSeconds() + (2500 / 1000));
+//        // targetMicro = (FreeRunningTimer_GetMicroSeconds() % 1000) + (2500 % 1000);
+//    }
+    // while (1);
+   // BOARD_End();
+    return 1;
+}
+#endif
 
 void __ISR(_TIMER_5_VECTOR) Timer5IntHandler(void) {
     //   char *msg = "Work mother fucker\r\n";

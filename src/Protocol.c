@@ -137,10 +137,15 @@ int Protocol_SendDebugMessage(char *Message) {
 
 unsigned char Protocol_ReadNextID(void) {
     /* need to get the next ID */
+    return packID;
 }
 
 int Protocol_GetPayload(void* payload) {
-    /* takes in memory location of the payload */
+    unsigned char i; 
+    for (i = 0; i < packLENGTH; i++) {
+        ((unsigned char*) payload)[i] = packPAYLOAD[i+1];
+    }
+    return SUCCESS;
 }
 
 char Protocol_IsMessageAvailable(void) {
