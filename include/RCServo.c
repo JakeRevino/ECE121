@@ -21,6 +21,7 @@
  ******************************************************************************/
 static unsigned int tickPulse;
 static unsigned char* RC_PAYLOAD;
+static unsigned int countIt;
 
 /**
  * @Function RCServo_Init(void)
@@ -35,7 +36,7 @@ int RCServo_Init(void) {
     PR3 = 31250; // Set period register for 50ms roll-over
 
     /* set up timer3 interrupts */
-    IPC3bits.T3IP = 5; // timer 3 interrupt priority
+    IPC3bits.T3IP = 3; // timer 3 interrupt priority
     IPC3bits.T3IS = 3; // T3 subpriority
     IFS0bits.T3IF = 0; // clear interrupt flag
     IEC0bits.T3IE = 1; // enable timer 3 interrupts
@@ -46,7 +47,7 @@ int RCServo_Init(void) {
     OC3CONbits.OCM = 6; // PWM mode with Fault pin disabled
     //OC3RS = 1249; // this sets a 2% duty cycle 
     OC3R = RC_SERVO_CENTER_PULSE; // this sets initial duty cycle
-   // OC3RS = 1100;
+    OC3RS = 600;
 
     T3CONbits.ON = 1; // enable timer3
     OC3CONbits.ON = 1; // enable OC3
@@ -102,14 +103,15 @@ int main(void) {
     BOARD_Init();
     Protocol_Init();
 
+
     while (1) {
-        
+        countIt++;
         if (Protocol_IsMessageAvailable() == TRUE) {
             if (ID_COMMAND_SERVO_PULSE == Protocol_ReadNextID()) {
                 Protocol_GetPayload(RC_PAYLOAD);
-                RCServo_SetPulse((unsigned int)RC_PAYLOAD);
+                RCServo_SetPulse((unsigned int) RC_PAYLOAD);
             }
-           // LEDS_SET(0xf);
+            // LEDS_SET(0xf);
         }
     }
 
@@ -119,10 +121,16 @@ int main(void) {
 
 void __ISR(_TIMER_3_VECTOR, ipl3auto) T3_IntHandler(void) {
 
-    OC3RS = tickPulse;
-    LEDS_SET(0b1001001);
-    IFS0bits.T3IF = 0;
 
+    if (countIt % 2 == 0) {
+        OC3RS = OC3RS + 10;
+        LEDS_SET(0b1001001);
+    } else if (countIt % 2 == 1) {
+        OC3RS = OC3RS - 10;
+         LEDS_SET(0b1000001);
+    }
+   
+    IFS0bits.T3IF = 0;
 
 }
 
