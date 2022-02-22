@@ -11,6 +11,8 @@
 #define RC_SERVO_CENTER_PULSE 1500
 #define RC_SERVO_MAX_PULSE 2400
 
+static unsigned char servoPAYLOAD[128];
+
 /*******************************************************************************
  * PUBLIC FUNCTIONS                                                           *
  ******************************************************************************/

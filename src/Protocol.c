@@ -81,17 +81,17 @@ int Protocol_Init(void) {
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     unsigned char SCORED; // this is being used as a check to make sure PutChar is successful
     SCORED = PutChar(HEAD);
-   // printf("%X", HEAD);
+    // printf("%X", HEAD);
     if (SCORED == SUCCESS) {
         SCORED = PutChar(len);
-     //   printf("%X", len);
+        //   printf("%X", len);
     }
 
     unsigned char checksum = 0;
     checksum = Protocol_CalcIterativeChecksum(ID, checksum);
     if (SCORED == SUCCESS) {
         SCORED = PutChar(ID);
-       // printf("%X", ID);
+        // printf("%X", ID);
     }
     unsigned char i;
     unsigned char * plchar = Payload;
@@ -99,18 +99,18 @@ int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     for (i = 0; i < len - 1; i++) { // len -1 because the lenght given includes the ID
         if (SCORED == SUCCESS) {
             SCORED = PutChar(*plchar);
-         //   printf("%X", *plchar);
+            //   printf("%X", *plchar);
         }
         checksum = Protocol_CalcIterativeChecksum(*plchar, checksum);
         ++plchar;
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar(TAIL);
-       // printf("%X", TAIL);
+        // printf("%X", TAIL);
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar(checksum);
-      //  printf("%X", checksum);
+        //  printf("%X", checksum);
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar('\r');
@@ -118,7 +118,7 @@ int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     }
     if (SCORED == SUCCESS) {
         SCORED = PutChar('\n');
-       // printf("%X", '\n');
+        // printf("%X", '\n');
     }
     return SUCCESS;
 }
@@ -129,33 +129,43 @@ int Protocol_SendDebugMessage(char *Message) {
     for (x = 0; x <= len; x++) {
         packPAYLOAD[x] = Message[x];
     }
-  //  printf("%c", packPAYLOAD[1]);
+    //  printf("%c", packPAYLOAD[1]);
     Protocol_SendMessage(len + 1, ID_DEBUG, packPAYLOAD);
     return SUCCESS;
     // return Protocol_SendMessage(strlen(Message), ID_DEBUG, Message);
 }
 
 unsigned char Protocol_ReadNextID(void) {
-    /* need to get the next ID */
+    //unsigned char thisID = dequeue_CB(&RXCB);
     return packID;
 }
 
 int Protocol_GetPayload(void* payload) {
-    unsigned char i; 
-    for (i = 0; i < packLENGTH; i++) {
-        ((unsigned char*) payload)[i] = packPAYLOAD[i+1];
+    if ((!check_EmptyBuff(&RXCB)) || (!check_EmptyBuff(&TXCB))) {
+        return ERROR;
     }
+    //unsigned char tempLength = dequeue_CB(&RXCB) - 1;
+    unsigned char i;
+    unsigned char temp[packLENGTH];
+    dequeue_CB(&RXCB); // this gets rid of the ID
+    for (i = 0; i < packLENGTH; i++) {
+        if (check_EmptyBuff(&RXCB) == 0) {
+        temp[i] = dequeue_CB(&RXCB);
+        }
+        //((unsigned char*) payload)[i] = packPAYLOAD[i+1];
+    }
+    memcpy(payload, temp, packLENGTH);
     return SUCCESS;
 }
 
 char Protocol_IsMessageAvailable(void) {
-    if ((!check_EmptyBuff(&RXCB)) | (!check_EmptyBuff(&TXCB))) {
+    if ((!check_EmptyBuff(&RXCB)) || (!check_EmptyBuff(&TXCB))) {
         return TRUE;
     }
 }
 
 char Protocol_IsQueueFull(void) {
-    if (check_FullBuff(&TXCB) | check_FullBuff(&RXCB)) {
+    if (check_FullBuff(&TXCB) || check_FullBuff(&RXCB)) {
         return TRUE;
     }
 }
@@ -206,8 +216,8 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
     switch (MODE) {
         case WAIT_FOR_HEAD:
             if (charIn == HEAD) {
-                packLENGTH = 0; // resetting the variables used
-                packID = 0;
+             //   packLENGTH = 0; // resetting the variables used
+             //   packID = 0;
                 packCHECKSUM = 0;
                 counter = 0;
                 ledValue = 0;
@@ -300,13 +310,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             }
             break;
 
-            /*        case GET_END1:
-                        MODE = GET_END2;
-                        break;
-
-                    case GET_END2:
-                        MODE = WAIT_FOR_HEAD;
-                        break; */
+       
     }
 }
 
@@ -341,7 +345,7 @@ void __ISR(_UART1_VECTOR)IntUart1Handler(void) {
         IFS0bits.U1TXIF = 0; // reset the flag
         if (putCharFlag == 0) {
             if (check_EmptyBuff(&TXCB) == 0) {
-            U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
+                U1TXREG = dequeue_CB(&TXCB); // value from CB goes into TX reg
             }
             // IFS0bits.U1TXIF = 0;
 

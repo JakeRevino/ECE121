@@ -29,7 +29,7 @@ int check_FullBuff(struct CircleBuffer *buff) {
 }
 
 void enqueue_CB(char input, struct CircleBuffer *buff) { // write to CB
-    if (!check_FullBuff(buff)) { // check if there is space in the circle buffer
+    if (check_FullBuff(buff) == 0) { // check if there is space in the circle buffer
         buff->data[buff->tail] = input; // this is writing the data to the tail
         buff->tail = ((buff->tail + 1) % MAX_BUFFER_LENGTH); // this is incrementing 
         buff->size++;
@@ -38,7 +38,7 @@ void enqueue_CB(char input, struct CircleBuffer *buff) { // write to CB
 
 unsigned char dequeue_CB(struct CircleBuffer *buff) { // read from CB
     unsigned char temp = 0;
-    if (!check_EmptyBuff(buff)) { // check buffer isn't empty, ie. if there is data to dequeue
+    if (check_EmptyBuff(buff) == 0) { // check buffer isn't empty, ie. if there is data to dequeue
         temp = buff->data[buff->head];
         buff->head = ((buff->head + 1) % MAX_BUFFER_LENGTH);
         buff->size--;
