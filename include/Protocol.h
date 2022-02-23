@@ -139,7 +139,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn);
  * @return SUCCESS or ERROR
  * @brief adds to circular buffer if space exists, if not returns ERROR
  * @author mdunne */
-int PutChar(char ch);
+char PutChar(char ch);
 
 /**
  * @Function void Configure_Pong(void* theArray)

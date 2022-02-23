@@ -12,7 +12,8 @@ void init_buff(struct CircleBuffer *buff) { // init the buffer
 
 int check_EmptyBuff(struct CircleBuffer *buff) {
     if (buff->size <= 0) {
-        //    if (buff->head == buff->tail) { // if head == tail then its empty
+        return 1;
+    } else if (buff->head == buff->tail) { // if head == tail then its empty
         return 1;
 
     } else
