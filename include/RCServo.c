@@ -379,7 +379,7 @@ int main(void) {
             prevPulse = OC3RS; // update prevPulse
             //  RCServo_SetPulse(prevPulse);
             thisPulse = Protocol_IntEndednessConversion(thisPulse);
-            Protocol_SendMessage(4, ID_SERVO_RESPONSE, &thisPulse);
+            Protocol_SendMessage(5, ID_SERVO_RESPONSE, &thisPulse);
         } else {
             thisPulse = ((rc_PL1 << 24) | (rc_PL2 << 16) | (rc_PL3 << 8) | rc_PL4);
             RCServo_SetPulse(thisPulse); // scaling it to an unsigned int
