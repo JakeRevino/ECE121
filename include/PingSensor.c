@@ -5,7 +5,6 @@
 #include "BOARD.h"
 #include "MessageIDs.h"
 
-
 //#define PING_SENSOR_TEST
 
 static unsigned int IC_RisingEdge;
@@ -41,7 +40,7 @@ int PingSensor_Init(void) {
     PR4 = 37500; // Set period register for 60ms roll-over
 
     /* set up timer4 interrupts */
-    IPC4bits.T4IP = 5; // timer 4 interrupt priority
+    IPC4bits.T4IP = 4; // timer 4 interrupt priority
     IPC4bits.T4IS = 3; // T4 subpriority
     IFS0bits.T4IF = 0; // clear interrupt flag
     IEC0bits.T4IE = 1; // enable timer 4 interrupts
@@ -63,7 +62,7 @@ int PingSensor_Init(void) {
 
     /* CONFIGURE INPUT CAPTURE INTERRUPTS */
     IPC3bits.IC3IP = 6; // Input Capture interrupt priority
-    IPC3bits.IC3IS = 3; // Input Capture interrupt sub-priority
+    IPC3bits.IC3IS = 2; // Input Capture interrupt sub-priority
     IFS0bits.IC3IF = 0; // Clear interrupt flag
 
     /* ENABLE */

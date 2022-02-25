@@ -44,5 +44,7 @@ unsigned int RCServo_GetPulse(void);
  * @return raw timer ticks required to generate current pulse. */
 unsigned int RCServo_GetRawTicks(void);
 
+void Configure_Servo(void* theshit);
+
 #endif	/* RCSERVO_H */
 

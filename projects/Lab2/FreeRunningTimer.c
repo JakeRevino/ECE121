@@ -28,8 +28,8 @@ void FreeRunningTimer_Init(void) {
     PR5 = 2500; // Set period register. 40 MHz operating f, but minus 1
 
     /* set up interrupts */
-    IPC5bits.T5IP = 1; // timer 5 interrupt priority
-    IPC5bits.T5IS = 1;
+    IPC5bits.T5IP = 6; // timer 5 interrupt priority
+    IPC5bits.T5IS = 3;
     IFS0bits.T5IF = 0; // clear interrupt flag
     IEC0bits.T5IE = 1; // enable timer 5 interrupts
 
