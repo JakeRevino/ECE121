@@ -94,51 +94,51 @@ int Protocol_Init(void) {
 }
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
-    while (PutChar(HEAD) == ERROR)
-        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
-    while (PutChar(len) == ERROR)
-        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
+    while (PutChar(HEAD) == ERROR);
+//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
+    while (PutChar(len) == ERROR);
+//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
     unsigned char checksum = 0;
     checksum = Protocol_CalcIterativeChecksum(ID, checksum);
-    while (PutChar(ID) == ERROR)
-        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
+    while (PutChar(ID) == ERROR);
+//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
 
     unsigned char i;
     unsigned char * plchar = Payload;
 
     for (i = 0; i < (unsigned int) len - 1; i++) { // len -1 because the lenght given includes the ID
-        while (PutChar(*plchar) == ERROR)
-            for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-                asm(" nop ");
-            }
+        while (PutChar(*plchar) == ERROR);
+//            for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//                asm(" nop ");
+//            }
         checksum = Protocol_CalcIterativeChecksum(*plchar, checksum);
         ++plchar;
     }
-    for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
-        asm(" nop ");
-    }
-    while (PutChar(TAIL) == ERROR)
-        for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
-    while (PutChar(checksum) == ERROR)
-        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
-    while (PutChar('\r') == ERROR)
-        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
-    while (PutChar('\n') == ERROR)
-        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-            asm(" nop ");
-        }
+//    for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
+//        asm(" nop ");
+//    }
+    while (PutChar(TAIL) == ERROR);
+//        for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
+    while (PutChar(checksum) == ERROR);
+//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
+    while (PutChar('\r') == ERROR);
+//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
+    while (PutChar('\n') == ERROR);
+//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+//            asm(" nop ");
+//        }
     return SUCCESS;
 
 }
@@ -186,8 +186,10 @@ char Protocol_IsError(void) {
 }
 
 unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
-
-    /* 1 line */
+    unsigned char front = (inVariable & 0xFF00) >> 8;
+    unsigned char back = inVariable & 0x00FF;
+    unsigned int result = ((unsigned short) ((back << 8) + front));
+    return result;
 
 }
 
@@ -263,8 +265,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 pongFlag = 1; // set flag for Pong
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 counter++;
-            }
-            else if (packID == ID_COMMAND_SERVO_PULSE) {
+            } else if (packID == ID_COMMAND_SERVO_PULSE) {
                 packPAYLOAD[index] = charIn; // save charIn to the payload
                 servoFlag = 1; // set flag for servo
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
