@@ -40,11 +40,14 @@ static unsigned char packLEDS;
 static unsigned char ledValue;
 static int pongFlag;
 static int servoFlag;
+static int appFlag;
 
 unsigned int rc_PL1;
 unsigned int rc_PL2;
 unsigned int rc_PL3;
 unsigned int rc_PL4;
+
+unsigned int APP_PL;
 
 static unsigned char destinationPL[maxPAYLOADlength];
 
@@ -95,50 +98,50 @@ int Protocol_Init(void) {
 
 int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
     while (PutChar(HEAD) == ERROR);
-//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
     while (PutChar(len) == ERROR);
-//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
     unsigned char checksum = 0;
     checksum = Protocol_CalcIterativeChecksum(ID, checksum);
     while (PutChar(ID) == ERROR);
-//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
 
     unsigned char i;
     unsigned char * plchar = Payload;
 
     for (i = 0; i < (unsigned int) len - 1; i++) { // len -1 because the lenght given includes the ID
         while (PutChar(*plchar) == ERROR);
-//            for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//                asm(" nop ");
-//            }
+        //            for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+        //                asm(" nop ");
+        //            }
         checksum = Protocol_CalcIterativeChecksum(*plchar, checksum);
         ++plchar;
     }
-//    for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
-//        asm(" nop ");
-//    }
+    //    for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
+    //        asm(" nop ");
+    //    }
     while (PutChar(TAIL) == ERROR);
-//        for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 10; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
     while (PutChar(checksum) == ERROR);
-//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
     while (PutChar('\r') == ERROR);
-//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
     while (PutChar('\n') == ERROR);
-//        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
-//            asm(" nop ");
-//        }
+    //        for (int x = 0; x < 4; x++) { // delay for at least 10us before resetting the interrupt flag
+    //            asm(" nop ");
+    //        }
     return SUCCESS;
 
 }
@@ -274,6 +277,13 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 if (counter == 4) {
                     MODE = GET_TAIL;
                 }
+            } else if (packID == ID_LAB2_INPUT_SELECT) {
+                packPAYLOAD[index] = charIn;
+                appFlag = 1;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                counter++;
+                index++;
+                MODE = GET_TAIL;
             } else if (pongFlag == 1) {
                 packPAYLOAD[counter] = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
@@ -332,7 +342,10 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 rc_PL4 = packPAYLOAD[4];
                 LEDS_SET(0b110011);
                 MODE = WAIT_FOR_HEAD;
-            } else {
+            } else if (appFlag == 1) {
+                APP_PL = packPAYLOAD[1];
+                MODE = WAIT_FOR_HEAD;
+            }else {
 
                 enqueue_Payload(packPAYLOAD, packLENGTH, &PLCB);
                 //MODE = GET_END1;

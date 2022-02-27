@@ -68,7 +68,7 @@ void enqueue_Payload(unsigned char *input, unsigned char len, struct CircleBuffe
 
 unsigned char dequeue_Payload(unsigned char *destination, struct CircleBuffer *buff) {
     // also want to make sure its not empty or full
-    memcpy(destination, &buff->payloads[buff->RX_head][1], buff->payloadLength[buff->RX_head]);
+    memcpy(destination, &(buff->payloads[buff->RX_head][1]), buff->payloadLength[buff->RX_head]);
     buff->RX_head = ((buff->RX_head + 1) % MAX_BUFFER_LENGTH);
 }
 
