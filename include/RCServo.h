@@ -45,6 +45,7 @@ unsigned int RCServo_GetPulse(void);
 unsigned int RCServo_GetRawTicks(void);
 
 void Configure_Servo(void* theshit);
+unsigned int Convert2Degrees(unsigned int distance);
 
 #endif	/* RCSERVO_H */
 

@@ -109,6 +109,12 @@ unsigned int RCServo_GetRawTicks(void) {
     return OC3RS;
 }
 
+unsigned int Convert2Degrees(unsigned int distance) {
+    unsigned int temp = distance - 0.25;
+    unsigned int theta = (90 * temp) - 45;
+    return theta;
+}
+
 #ifdef RC_SERVO_TEST
 
 int main(void) {
@@ -122,10 +128,6 @@ int main(void) {
     static int flag = 0;
     LEDS_SET(0b11);
 
-//    union {
-//        unsigned int z;
-//        unsigned char D[4];
-//    } output;
     prevPulse = OC3RS;
     while (1) {
         if (prevPulse != OC3RS) {
@@ -138,33 +140,6 @@ int main(void) {
             thisPulse = ((rc_PL1 << 24) | (rc_PL2 << 16) | (rc_PL3 << 8) | rc_PL4);
             RCServo_SetPulse(thisPulse); // scaling it to an unsigned int
         }
-//                if (Protocol_IsMessageAvailable() == TRUE) {
-//                   
-//                    unsigned char msg[MAXPAYLOADLENGTH];
-//        
-//        
-//        
-//                    switch (Protocol_ReadNextID()) {
-//                        case ID_COMMAND_SERVO_PULSE:
-//                             LEDS_SET(0b11);
-//                            Protocol_GetPayload(&msg);
-//                            output.D[0] = msg[1];
-//                            output.D[1] = msg[2];
-//                            output.D[2] = msg[3];
-//                            output.D[3] = msg[4];
-//                            output.z = Protocol_IntEndednessConversion(output.z);
-//        
-//                            RCServo_SetPulse(output.z);
-//                            output.z = RCServo_GetPulse();
-//                            output.z = Protocol_IntEndednessConversion(output.z);
-//                            Protocol_SendMessage((unsigned char) 0x5, ID_SERVO_RESPONSE, &(output.z));
-//                            break;
-//                        default:
-//                            Protocol_GetPayload(&msg);
-//                            break;
-//        
-//                    }
-//                }
     }
     while (1);
     BOARD_End();
@@ -177,7 +152,7 @@ void __ISR(_OUTPUT_COMPARE_3_VECTOR) __OC3Interrupt(void) {
 
     // OC3RS = nextPulse;
     //  flag = 1;
-    
+
     IFS0bits.OC3IF = 0;
 
 

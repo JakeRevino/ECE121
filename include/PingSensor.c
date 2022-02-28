@@ -10,7 +10,7 @@
 static unsigned int IC_RisingEdge;
 static unsigned int IC_FallingEdge;
 static unsigned int dT;
-static unsigned int distance;
+unsigned int distance;
 unsigned short TEMP_distance;
 static unsigned short thisDistance;
 
@@ -132,14 +132,14 @@ int main(void) {
 void __ISR(_TIMER_4_VECTOR)Timer4IntHandlr(void) {
     if (IFS0bits.T4IF == 1) {
         IFS0bits.T4IF = 0;
-        LATDbits.LATD1 = 1; // turn on
+        LATDbits.LATD1 = 1; // turn on pin 7
 
 
         for (int i = 0; i < 400; i++) { // delay for at least 10us before resetting the interrupt flag
             asm(" nop ");
-            IFS0bits.T4IF = 0;
+            IFS0bits.T4IF = 0; 
         }
-        LATDbits.LATD1 = 0; // turn off
+        LATDbits.LATD1 = 0; // turn off pin 7
     }
 
 
