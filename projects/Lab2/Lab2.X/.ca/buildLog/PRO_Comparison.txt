@@ -1,0 +1,43 @@
+make -f nbproject/Makefile-PRO_Comparison.mk SUBPROJECTS= .clean-conf
+make[1]: Entering directory 'C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X'
+rm -f  -r .ca/build/PRO_Comparison/production
+rm -f  -r .ca/dist/PRO_Comparison/production
+make[1]: Leaving directory 'C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X'
+[32mCLEAN SUCCESSFUL (total time: 256ms)[0m
+make -f nbproject/Makefile-PRO_Comparison.mk SUBPROJECTS= .build-conf
+make[1]: Entering directory 'C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X'
+make  -f nbproject/Makefile-PRO_Comparison.mk .ca/dist/PRO_Comparison/production/Lab2.X.production.hex
+make[2]: Entering directory 'C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X'
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/BOARD.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/BOARD.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/BOARD.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/FreeRunningTimer.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/FreeRunningTimer.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/FreeRunningTimer.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/Lab2Application.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/Lab2Application.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/Lab2Application.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/RCServo.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/RCServo.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/RCServo.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/RotaryEncoder.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/RotaryEncoder.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/RotaryEncoder.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/PingSensor.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/PingSensor.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/PingSensor.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/circleBuff.o.d" -o .ca/build/PRO_Comparison/production/circleBuff.o circleBuff.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"    -g -x c -c -mprocessor=32MX340F512H  -fno-common -DAPPLICATION_TEST -I"C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X" -I"../../../include" -I"." -I"../../../src" -MP -MMD -MF ".ca/build/PRO_Comparison/production/_ext/1007010529/Protocol.o.d" -o .ca/build/PRO_Comparison/production/_ext/1007010529/Protocol.o C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/Protocol.c    -DXPRJ_PRO_Comparison=PRO_Comparison      -mafrlcsj -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"  
+[31mC:\Users\jrev1\AppData\Local\Temp\cckJ2p1d.s: Assembler messages:
+C:\Users\jrev1\AppData\Local\Temp\cckJ2p1d.s:39: Error: opcode not supported on this processor: pic32mx (mips32r2) `mfc0 $2,$13'
+C:\Users\jrev1\AppData\Local\Temp\cckJ2p1d.s:51: Error: opcode not supported on this processor: pic32mx (mips32r2) `mtc0 $2,$13'
+C:\Users\jrev1\AppData\Local\Temp\cckJ2p1d.s:65: Error: opcode not supported on this processor: pic32mx (mips32r2) `ei $2'[0m
+"C:\Program Files\Microchip\xc32\v4.00\bin\xc32-gcc.exe"   -mprocessor=32MX340F512H  -o .ca/dist/PRO_Comparison/production/Lab2.X.production.elf .ca/build/PRO_Comparison/production/_ext/1007010529/BOARD.o .ca/build/PRO_Comparison/production/_ext/1007010529/FreeRunningTimer.o .ca/build/PRO_Comparison/production/_ext/1007010529/Lab2Application.o .ca/build/PRO_Comparison/production/_ext/1007010529/PingSensor.o .ca/build/PRO_Comparison/production/_ext/1007010529/Protocol.o .ca/build/PRO_Comparison/production/_ext/1007010529/RCServo.o .ca/build/PRO_Comparison/production/_ext/1007010529/RotaryEncoder.o .ca/build/PRO_Comparison/production/circleBuff.o          -DXPRJ_PRO_Comparison=PRO_Comparison    -mafrlcsj   -Wl,--defsym=__MPLAB_BUILD=1,--no-code-in-dinit,--no-dinit-in-serial-mem,-Map=".ca/dist/PRO_Comparison/production/Lab2.X.production.map",--memorysummary,.ca/dist/PRO_Comparison/production/memoryfile.xml -mdfp="C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259"
+[31m
+Info: Loading file: ./C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259/xc32/32MX340F512H/p32MX340F512H.ld[0m
+[31m
+Info: Loading file: ./C:/Program Files/Microchip/MPLABX/v6.00/packs/Microchip/PIC32MX_DFP/1.5.259/xc32/32MX340F512H/p32MX340F512H.ld[0m
+
+PRO Optimization:
+-------------------------------------------------------------------------------
+Total program memory used (bytes):     13132 
+Total data memory used (bytes):        25244 
+-------------------------------------------------------------------------------
+
+Current Optimization:
+-------------------------------------------------------------------------------
+Total program memory used (bytes):     20760 
+Total data memory used (bytes):        25792 
+-------------------------------------------------------------------------------
+"C:\Program Files\Microchip\xc32\v4.00\bin"\\xc32-bin2hex .ca/dist/PRO_Comparison/production/Lab2.X.production.elf 
+make[2]: Leaving directory 'C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X'
+make[1]: Leaving directory 'C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X'
+[32mBUILD SUCCESSFUL (total time: 6s)[0m

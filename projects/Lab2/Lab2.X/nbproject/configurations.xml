@@ -39,6 +39,7 @@
     <Elem>C:\Users\jrev1\OneDrive\Desktop\jrevino-master\include</Elem>
     <Elem>.</Elem>
     <Elem>../../../src</Elem>
+    <Elem>../../../include</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
