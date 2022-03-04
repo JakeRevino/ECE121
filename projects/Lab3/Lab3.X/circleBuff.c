@@ -33,14 +33,6 @@ int check_EmptyRX(struct CircleBuffer *buff) {
         return 0;
 }
 
-int check_FullRX(struct CircleBuffer *buff) {
-    if (buff->RX_head == (buff->RX_tail + 1) % MAX_BUFFER_LENGTH) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
 int check_FullBuff(struct CircleBuffer *buff) {
     // if (buff->head == ((buff->tail + 1) % MAX_BUFFER_LENGTH)) {
     if (buff->size >= MAX_BUFFER_LENGTH - 1) {
@@ -70,23 +62,15 @@ unsigned char dequeue_CB(struct CircleBuffer *buff) { // read from CB
 
 void enqueue_Payload(unsigned char *input, unsigned char len, struct CircleBuffer *buff) {
     // want to first check if its empty
-    if (check_FullRX(buff) == 1) {
-        return ERROR;
-    } else {
-        memcpy(buff->payloads[buff->RX_tail], input, len);
-        buff->payloadLength[buff->RX_tail] = len;
-        buff->RX_tail = ((buff->RX_tail + 1) % MAX_BUFFER_LENGTH);
-    }
+    memcpy(buff->payloads[buff->RX_tail], input, len);
+    buff->payloadLength[buff->RX_tail] = len;
+    buff->RX_tail = ((buff->RX_tail + 1) % MAX_BUFFER_LENGTH);
 }
 
 unsigned char dequeue_Payload(unsigned char *destination, struct CircleBuffer *buff) {
     // also want to make sure its not empty or full
-    if (check_EmptyRX(buff) == 1) {
-        return ERROR;
-    } else {
-        memcpy(destination, &(buff->payloads[buff->RX_head][1]), buff->payloadLength[buff->RX_head]);
-        buff->RX_head = ((buff->RX_head + 1) % MAX_BUFFER_LENGTH);
-    }
+    memcpy(destination, &(buff->payloads[buff->RX_head][1]), buff->payloadLength[buff->RX_head]);
+    buff->RX_head = ((buff->RX_head + 1) % MAX_BUFFER_LENGTH);
 }
 
 unsigned char returnID(struct CircleBuffer *buff) {

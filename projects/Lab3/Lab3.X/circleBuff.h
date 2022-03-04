@@ -48,7 +48,6 @@
     unsigned char dequeue_Payload(unsigned char *destination, struct CircleBuffer *buff);
     unsigned char returnID(struct CircleBuffer *buff);
     int check_EmptyRX(struct CircleBuffer *buff);
-    int check_FullRX(struct CircleBuffer *buff);
 
 #endif /* circleBuff_h */
 
