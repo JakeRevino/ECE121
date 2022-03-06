@@ -1,3 +1,636 @@
+//#include <stdio.h> 
+//#include <xc.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <sys/attribs.h>
+//#include "BOARD.h"
+//#include "Protocol.h"
+//#include <proc/PIC32MX/p32mx340f512h.h>
+//#include "MessageIDS.h"
+//// #include "CircleBuffer.h"
+//
+//
+//
+//// #define PROTOCOL_TESTHARNESS
+//
+//// #define MAX_BUFFER_LENGTH 512
+//// #define BUFF_MAX_LEN    (MAXPAYLOADLENGTH*PACKETBUFFERSIZE)
+//#define BRG_FOR_IDEAL_RATE 21
+//#define MAX_BUFFER_LENGTH  (MAXPAYLOADLENGTH * PACKETBUFFERSIZE)
+//
+//
+//#define CIRCLE_BUFFER_TX 0
+//#define CIRCLE_BUFFER_RX 1 
+//#define CIRCLE_BUFFER_MSG 2
+//
+//
+//#define TX_IS_TALKING 1
+//#define RX_IS_TALKING 2
+//#define NOBODY_IS_TALKING 3
+//
+//typedef enum {
+//    CHILL, RECIEVED_HEAD, RECIEVED_LENGTH, RECIEVED_ID,
+//    IN_PAYLOAD, RECIEVED_PAYLOAD, RECIEVED_TAIL, RECIEVED_CHECKSUM,
+//    FINAL, AFTER_VALID_MESSAGE_LED
+//} rx_state;
+//
+//static char Semaphore = NOBODY_IS_TALKING;
+//static rx_state rxState;
+//
+//void CircleBuffer_Init(char type_of_cb);
+//void CircleBuffer_add(char type_of_cb, unsigned char item);
+//char CircleBuffer_remove(char type_of_cb);
+//char CircleBuffer_isempty(char type_of_cb);
+//char CircleBuffer_isfull(char type_of_cb);
+//unsigned short CircleBuffer_length(char type_of_cb);
+//
+//static struct {
+//    unsigned short head; // need to be short because index can go up to 640
+//    unsigned short tail;
+//    unsigned short num_of_elements;
+//    unsigned char data [MAX_BUFFER_LENGTH];
+//} circleBuffer_tx, circleBuffer_rx;
+//
+//static struct {
+//    unsigned short head; 
+//    unsigned short tail;
+//    unsigned short num_of_elements;
+//    unsigned char data [PACKETBUFFERSIZE];
+//} circleBuffer_msg;
+//
+//static struct {
+//    unsigned char current_message_index;
+//    unsigned char current_message_checksum;
+//    unsigned char current_message_id;
+//    unsigned char current_message_length;
+//    unsigned char current_message_final;
+//
+//    unsigned char ID_LEDS_STATE;
+//    unsigned char RECIEVED_LED_MODE;
+//
+//    unsigned char * current_message_payload;
+//    // 0 = default, 1 = GET, 2 = SET
+//} current_rx_message;
+//// circleBuffer_msg.data[circleBuffer_msg.head]
+//
+//static char error_flag = 0;
+//
+///**
+// * @Function Protocol_Init(void)
+// * @param None
+// * @return SUCCESS or ERROR
+// */
+//int Protocol_Init(void) {
+//
+//    // Prelab Part 3
+//    U1MODE = 0;
+//    U1BRG = 0;
+//    IFS0 = 0; // clear all of the flags for UART1
+//    IFS1 = 0; // clear all of the flags just in case
+//    U1STA = 0; // clear control registers
+//    U1TXREG = 0;
+//    U1RXREG = 0;
+//    U1BRG = BRG_FOR_IDEAL_RATE; // Baud rate gen = 21 gives baud rate of 115k
+//
+//    CircleBuffer_Init(CIRCLE_BUFFER_TX);
+//    CircleBuffer_Init(CIRCLE_BUFFER_RX);
+//    CircleBuffer_Init(CIRCLE_BUFFER_MSG);
+//
+//    U1STAbits.URXEN = 1; // Enable receiption bit
+//    U1STAbits.UTXEN = 1; // Enable transmission bit
+//    U1MODEbits.ON = 1; // UART on
+//
+//    // IE = interrupt enable
+//    // Configure UART interrupt for both RX and TX
+//    U1STAbits.UTXISEL = 2; // 2 (10 in binary) makes it so it get a TXIF set high 
+//    // everytime transmit buffer is empty
+//    U1STAbits.URXISEL = 0; // setting up U1 status register
+//    // RXIF set high everytime the recieve buffer is NOT empty
+//    IPC6bits.U1IP = 4; //set UART interrupt priority to 3
+//    IPC6bits.U1IS = 1; //set interrupt subpriority to 1
+//    IEC0bits.U1RXIE = 1; //enable RX interrupt
+//    IEC0bits.U1TXIE = 1; //enable TX interrupt
+//
+//}
+//
+///**
+// * @Function int Protocol_SendMessage(unsigned char len, void *Payload)
+// * @param len, length of full <b>Payload</b> variable
+// * @param Payload, pointer to data, will be copied in during the function
+// * @return SUCCESS or ERROR
+// */
+//int Protocol_SendMessage(unsigned char len, unsigned char ID, void *Payload) {
+//    if (Protocol_IsQueueFull()) {
+//        error_flag = 3;
+//        current_rx_message.current_message_id = 0;
+//        Semaphore = NOBODY_IS_TALKING;
+//        return ERROR;
+//    }
+//    char * message = (char *) Payload;
+//    char cksum = Protocol_CalcIterativeChecksum(ID, 0);
+//    int i;
+//    PutChar(HEAD);
+//    PutChar(len + 1);
+//    PutChar(ID);
+//    for (i = 0; i < len; i++) {
+//        cksum = Protocol_CalcIterativeChecksum(message[i], cksum);
+//        PutChar(message[i]);
+//    }
+//    PutChar(TAIL);
+//    PutChar(cksum);
+//    PutChar('\r'); // add pound define later
+//    PutChar('\n'); // add pound define later     
+//    return SUCCESS;
+//
+//}
+//
+///**
+// * @Function int Protocol_SendMessage(unsigned char len, void *Payload)
+// * @param len, length of full <b>Payload</b> variable
+// * @param Payload, pointer to data, will be copied in during the function
+// * @return SUCCESS or ERROR
+// */
+//int Protocol_SendDebugMessage(char *Message) {
+//    return Protocol_SendMessage(strlen(Message), ID_DEBUG, Message);
+//    //return SUCCESS;
+//}
+//
+///**
+// * @Function unsigned char Protocol_ReadNextID(void)
+// * @param None
+// * @return Reads ID of next Packet
+// * @brief Returns ID_INVALID if no packets are available
+// * @author mdunne */
+//unsigned char Protocol_ReadNextID(void) {
+//    if (CircleBuffer_isempty(CIRCLE_BUFFER_RX)) {
+//        return ID_INVALID;
+//    } else {
+//        // return CircleBuffer_remove(CIRCLE_BUFFER_RX);
+//        return circleBuffer_rx.data[circleBuffer_rx.head];
+//    }
+//}
+//
+///**
+// * @Function int Protocol_GetPayload(void* payload)
+// * @param payload, Memory location to put payload
+// * @return SUCCESS or ERROR
+// * @brief 
+// * @author mdunne */
+//int Protocol_GetPayload(void* payload) {
+//    // circleBuffer_msg
+//    if (CircleBuffer_isempty(CIRCLE_BUFFER_MSG) || CircleBuffer_isempty(CIRCLE_BUFFER_RX)) {
+//        return ERROR;
+//    }
+//    unsigned char length = CircleBuffer_remove(CIRCLE_BUFFER_MSG) - 1;
+//    unsigned char temp_data[length];
+//    // 0x0400000
+//    // char * message = (char *) payload;
+//    //char message[length];
+//    /*
+//    if (CircleBuffer_isempty(CIRCLE_BUFFER_RX)) {
+//        return ERROR;
+//    } else {
+//    */
+//        CircleBuffer_remove(CIRCLE_BUFFER_RX); // To discard the ID
+//        int i;
+//        for (i = 0; i < length; i++) { 
+//            // message[i] = CircleBuffer_remove(CIRCLE_BUFFER_RX);
+//            temp_data[i] = CircleBuffer_remove(CIRCLE_BUFFER_RX);
+//        }
+//        memcpy(payload, temp_data, length);
+//        return SUCCESS;
+//    // }
+//
+//}
+//
+///**
+// * @Function char Protocol_IsMessageAvailable(void)
+// * @param None
+// * @return TRUE if Queue is not Empty
+// * @brief 
+// * @author mdunne */
+//char Protocol_IsMessageAvailable(void) {
+//    // without this conditonal, it will break
+//    if (CircleBuffer_isempty(CIRCLE_BUFFER_RX) || CircleBuffer_isempty(CIRCLE_BUFFER_MSG)) {
+//        return FALSE;
+//    } else if (circleBuffer_msg.data[circleBuffer_msg.head] > circleBuffer_rx.num_of_elements) {
+//        // return TRUE;
+//        return FALSE;
+//    } else {
+//        return TRUE;
+//        //return TRUE;
+//    }
+//}
+//
+//char Protocol_IsQueueFull(void) {
+//    // if circlebuffer TX is full
+//    if (CircleBuffer_isfull(CIRCLE_BUFFER_TX)) {
+//        return TRUE;
+//    } else {
+//        return FALSE;
+//    }
+//}
+//
+///**
+// * @Function char Protocol_IsError(void)
+// * @param None
+// * @return TRUE if error
+// * @brief Returns if error has occurred in processing, clears on read
+// * @author mdunne */
+//char Protocol_IsError(void) {
+//    unsigned char system_error = 0;
+//    if(U1STAbits.FERR == 1 || U1STAbits.PERR == 1 || U1STAbits.OERR == 1)
+//    {
+//         rxState = CHILL;
+//         Protocol_Init();
+//         system_error = 1;
+//    }
+//    if (error_flag != 0) {
+//        if (error_flag == 1) {
+//            Protocol_SendDebugMessage("Length is too large");
+//        } else if (error_flag == 2) {
+//            Protocol_SendDebugMessage("BSD checksum did not equal");
+//        } else if (error_flag == 3) {
+//            Protocol_SendDebugMessage("TX Message queue is full");
+//        }
+//        error_flag = 0;
+//        rxState = CHILL;
+//        if(system_error != 1)
+//        {
+//            Protocol_Init();
+//        }
+//        return TRUE;
+//    } else {
+//        return FALSE;
+//    }
+//    
+//}
+//
+//unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
+//    // inVariable << 8; 
+//    // int can work 
+//    unsigned char most_sig = (inVariable & 0xFF00) >> 8;
+//    unsigned char least_sig = inVariable & 0x00FF;
+//    unsigned int results = ((unsigned short) ((least_sig << 8) + most_sig));
+//    // 
+//    return results;
+//}
+//
+//unsigned int Protocol_IntEndednessConversion(unsigned int inVariable) {
+//    unsigned short most_sig = (inVariable & 0xFFFF0000) >> 16;
+//    unsigned short least_sig = inVariable & 0x0000FFFF;
+//    unsigned int results_one = ((Protocol_ShortEndednessConversion(least_sig) << 16));
+//    unsigned int results_two = (Protocol_ShortEndednessConversion(most_sig));
+//    // return ((unsigned int) ((least_sig << 16) + most_sig));   
+//    return results_two + results_one;
+//}
+//
+//unsigned char Protocol_CalcIterativeChecksum(unsigned char charIn, unsigned char curChecksum) {
+//    curChecksum = (curChecksum >> 1) + (curChecksum << 7);
+//    curChecksum += charIn;
+//    return curChecksum;
+//}
+//
+//void Protocol_RunReceiveStateMachine(unsigned char charIn) {
+//    // switch is much more effecient in assembly than bunch of if else statements
+//    switch (rxState) {
+//        case CHILL:
+//            /* Obviously, the first thing to do is to wait for the head byte. Until that happens, all incoming data should be
+//            ignored. Once the head has been received, a new message is coming in and needs to be stored somewhere.
+//             */
+//            if (charIn == HEAD) {
+//                current_rx_message.current_message_index = 0;
+//                current_rx_message.current_message_checksum = 0;
+//                current_rx_message.current_message_length = 0;
+//                current_rx_message.current_message_id = 0;
+//                current_rx_message.ID_LEDS_STATE = 0;
+//                current_rx_message.RECIEVED_LED_MODE = 0;
+//                rxState = RECIEVED_HEAD;
+//                // Semaphore = RX_IS_TALKING;
+//            }
+//            break;
+//        case RECIEVED_HEAD:
+//            // Waiting for length
+//            if (charIn <= MAXPAYLOADLENGTH) {
+//                // Once we recieved the length
+//                rxState = RECIEVED_LENGTH;
+//                current_rx_message.current_message_length = charIn;
+//                // The stored length is stored + 1 as it includes the ID and the payload
+//            } else {
+//                error_flag = 1;
+//                // return ERROR;
+//                // add the ERROR function from protocol later
+//            }
+//            break;
+//        case RECIEVED_LENGTH:
+//            // Waiting for ID
+//            // then we recieved the id
+//            current_rx_message.current_message_id = charIn;
+//            if (charIn == ID_LEDS_GET) {
+//                rxState = RECIEVED_PAYLOAD;
+//            } else if (charIn == ID_LEDS_SET) {
+//                rxState = RECIEVED_ID;
+//            } else {
+//                CircleBuffer_add(CIRCLE_BUFFER_RX, charIn);
+//                CircleBuffer_add(CIRCLE_BUFFER_MSG, current_rx_message.current_message_length);
+//                // first thing we adding in the circle buffer rx is the id
+//                // By now, our RX circle buffer looks like this
+//                // rx_buffer = [ID]
+//                rxState = RECIEVED_ID;
+//            }
+//
+//            current_rx_message.current_message_index += 1;
+//            current_rx_message.current_message_checksum = Protocol_CalcIterativeChecksum(charIn, current_rx_message.current_message_checksum);
+//
+//            break;
+//        case RECIEVED_ID:
+//            // Waiting for the start of the payload
+//            // Charin will be the first character of the payload
+//            if (current_rx_message.current_message_id == ID_LEDS_SET) {
+//                current_rx_message.ID_LEDS_STATE = charIn;
+//                rxState = RECIEVED_PAYLOAD;
+//            } else {
+//                rxState = IN_PAYLOAD;
+//                CircleBuffer_add(CIRCLE_BUFFER_RX, charIn);
+//                // Here, we adding each character from the payload.
+//                // By now, our RX circle buffer looks like this
+//                // rx_buffer = [ID, Payload[0]]
+//            }
+//            current_rx_message.current_message_checksum = Protocol_CalcIterativeChecksum(charIn, current_rx_message.current_message_checksum);
+//            current_rx_message.current_message_index += 1;
+//            break;
+//        case IN_PAYLOAD:
+//            // Remianing characters of the payload
+//            CircleBuffer_add(CIRCLE_BUFFER_RX, charIn);
+//            current_rx_message.current_message_checksum = Protocol_CalcIterativeChecksum(charIn, current_rx_message.current_message_checksum);
+//            current_rx_message.current_message_index += 1;
+//            if (current_rx_message.current_message_index == current_rx_message.current_message_length) {
+//                rxState = RECIEVED_PAYLOAD;
+//            }
+//            break;
+//            // By now, our RX circle buffer looks like this
+//            // rx_buffer = [ID, Payload[0], Payload[1], ...]
+//            // msg_buffer = [len(message), ...]
+//        case RECIEVED_PAYLOAD:
+//            // After we
+//            // CircleBuffer_rx must contain the id + entire payload, thats it
+//            if (charIn == TAIL) {
+//                rxState = RECIEVED_TAIL;
+//            }
+//            break;
+//        case RECIEVED_TAIL:
+//            // we need to check the checksum from the client
+//            if (charIn == current_rx_message.current_message_checksum) {
+//                rxState = FINAL;
+//
+//            } else {
+//                error_flag = 2;
+//                // return error
+//            }
+//            current_rx_message.current_message_final = 0;
+//            break;
+//        case FINAL:
+//            if (current_rx_message.current_message_final == 0) {
+//                if (charIn == '\r') {
+//                    current_rx_message.current_message_final = 1;
+//                }
+//            } else if (current_rx_message.current_message_final == 1) {
+//                if (charIn == '\n') {
+//
+//                    if (current_rx_message.current_message_id == ID_LEDS_SET) {
+//                        LEDS_SET(current_rx_message.ID_LEDS_STATE);
+//                    } else if (current_rx_message.current_message_id == ID_LEDS_GET) {
+//                        current_rx_message.ID_LEDS_STATE = LEDS_GET();
+//                        Protocol_SendMessage(1, ID_LEDS_STATE, &current_rx_message.ID_LEDS_STATE);
+//                    }
+//
+//
+//                    current_rx_message.current_message_id = 0;
+//                    current_rx_message.ID_LEDS_STATE = 0;
+//                    current_rx_message.RECIEVED_LED_MODE = 0;
+//
+//                    Semaphore = NOBODY_IS_TALKING;
+//                    rxState = CHILL;
+//                    // COMPLETE!!
+//                }
+//            }
+//            break;
+//
+//    }
+//
+//
+//
+//}
+//
+///*
+// The first step to testing your serial communication is to send a single character to your Putty serial terminal
+//    on the PC. In order to do this, you need to define a function, PutChar, which will put a single character in the
+//    UART transmit buffer which enables the transmission. The function prototype is already in Protocol.h.
+// */
+//
+///**
+// * @Function char PutChar(char ch)
+// * @param ch, new char to add to the circular buffer
+// * @return SUCCESS or ERROR
+// * @brief adds to circular buffer if space exists, if not returns ERROR
+// * @author mdunne */
+//char PutChar(char ch) {
+//
+//    /*
+//     * U1STAbits.UTXBF referring to the actual transmit buffer the part UART1 system
+//     * Shift register
+//     */
+//    // if not full
+//    if (CircleBuffer_isfull(CIRCLE_BUFFER_TX) == 0) {
+//        CircleBuffer_add(CIRCLE_BUFFER_TX, ch);
+//        IFS0bits.U1TXIF = 1; // setting the interruption flag
+//        // Specific for the UAR1T system
+//        return SUCCESS;
+//    } else {
+//        return ERROR;
+//    }
+//
+//}
+//
+//// easy way to verify if you are correctly calculating it
+//
+//unsigned char BSDchecksum(char * str) {
+//    unsigned char cksum = 0;
+//    for (int i = 0; i < strlen(str); i++) {
+//        cksum = (cksum >> 1) + (cksum << 7);
+//        cksum += str[i];
+//    }
+//    return cksum;
+//}
+//
+//// THis function runs continousely 24/7
+//// Specifcally when there is an UART1 flag is set, this function will run.
+//
+//void __ISR(_UART1_VECTOR) IntUart1Handler(void) {
+//    // Goes high when recieve buffer recieves a single byte
+//    if (IFS0bits.U1RXIF && (Semaphore != TX_IS_TALKING)) {
+//        /*
+//        PutChar(U1RXREG + 1);
+//         Just for debugging
+//         */
+//        IFS0bits.U1RXIF = 0;
+//        if (error_flag == 0) {
+//            Semaphore = RX_IS_TALKING;
+//            // CircleBuffer_add(CIRCLE_BUFFER_RX, U1RXREG);
+//            // U1RXREG is the char that just came in
+//            Protocol_RunReceiveStateMachine(U1RXREG);
+//            Semaphore = NOBODY_IS_TALKING;
+//        } else {
+//            Protocol_IsError();
+//        }
+//        
+//
+//    }
+//    if (IFS0bits.U1TXIF && (Semaphore != RX_IS_TALKING)) {
+//
+//        // if hardware buffer is not full and the circlebuffer is not empty
+//        if (!U1STAbits.UTXBF && !CircleBuffer_isempty(CIRCLE_BUFFER_TX)) // Interrupt Driven Transmission
+//        {
+//            Semaphore = TX_IS_TALKING;
+//            U1TXREG = CircleBuffer_remove(CIRCLE_BUFFER_TX);
+//        }
+//        // 1 = Transmit shift register is empty and transmit buffer is empty (the last transmission has completed
+//        if (U1STAbits.TRMT) {
+//            IFS0bits.U1TXIF = 0; // clearing the interrupt flag
+//            Semaphore = NOBODY_IS_TALKING;
+//        }
+//
+//    }
+//
+//
+//
+//}
+//
+//void CircleBuffer_Init(char type_of_cb) {
+//    if (type_of_cb == CIRCLE_BUFFER_TX) {
+//        circleBuffer_tx.head = 0;
+//        circleBuffer_tx.tail = 0;
+//        circleBuffer_tx.num_of_elements = 0;
+//    } else if (type_of_cb == CIRCLE_BUFFER_RX) {
+//        circleBuffer_rx.head = 0;
+//        circleBuffer_rx.tail = 0;
+//        circleBuffer_rx.num_of_elements = 0;
+//    } else if (type_of_cb == CIRCLE_BUFFER_MSG) {
+//        circleBuffer_msg.head = 0;
+//        circleBuffer_msg.tail = 0;
+//        circleBuffer_msg.num_of_elements = 0;
+//    }
+//
+//}
+//
+//void CircleBuffer_add(char type_of_cb, unsigned char item) {
+//    if(!CircleBuffer_isfull(type_of_cb))
+//    {
+//        if (type_of_cb == CIRCLE_BUFFER_TX) {
+//           circleBuffer_tx.data[circleBuffer_tx.tail] = item;
+//           circleBuffer_tx.tail = (circleBuffer_tx.tail + 1) % MAX_BUFFER_LENGTH;
+//           circleBuffer_tx.num_of_elements++;
+//       } else if (type_of_cb == CIRCLE_BUFFER_RX) {
+//           circleBuffer_rx.data[circleBuffer_rx.tail] = item;
+//           circleBuffer_rx.tail = (circleBuffer_rx.tail + 1) % MAX_BUFFER_LENGTH;
+//           circleBuffer_rx.num_of_elements++;
+//       } else if (type_of_cb == CIRCLE_BUFFER_MSG) {
+//           circleBuffer_msg.data[circleBuffer_msg.tail] = item;
+//           circleBuffer_msg.tail = (circleBuffer_msg.tail + 1) % PACKETBUFFERSIZE;
+//           circleBuffer_msg.num_of_elements++;
+//       }       
+//    }
+//
+//}
+//
+//char CircleBuffer_remove(char type_of_cb) {
+//    if (type_of_cb == CIRCLE_BUFFER_TX) {
+//        char item_will_removed = (circleBuffer_tx.data)[circleBuffer_tx.head];
+//        circleBuffer_tx.head = (circleBuffer_tx.head + 1) % MAX_BUFFER_LENGTH;
+//        circleBuffer_tx.num_of_elements--;
+//        return item_will_removed;
+//    } else if (type_of_cb == CIRCLE_BUFFER_RX) {
+//        char item_will_removed = (circleBuffer_rx.data)[circleBuffer_rx.head];
+//        circleBuffer_rx.head = (circleBuffer_rx.head + 1) % MAX_BUFFER_LENGTH;
+//        circleBuffer_rx.num_of_elements--;
+//        return item_will_removed;
+//    } else if (type_of_cb == CIRCLE_BUFFER_MSG) {
+//        char item_will_removed = (circleBuffer_msg.data)[circleBuffer_msg.head];
+//        circleBuffer_msg.head = (circleBuffer_msg.head + 1) % PACKETBUFFERSIZE;
+//        circleBuffer_msg.num_of_elements--;
+//        return item_will_removed;
+//    }
+//}
+//
+//char CircleBuffer_isempty(char type_of_cb) {
+//    if (type_of_cb == CIRCLE_BUFFER_TX) {
+//        return circleBuffer_tx.num_of_elements == 0;
+//    } else if (type_of_cb == CIRCLE_BUFFER_RX) {
+//        return circleBuffer_rx.num_of_elements == 0;
+//    } else if (type_of_cb == CIRCLE_BUFFER_MSG) {
+//        return circleBuffer_msg.num_of_elements == 0;
+//    }
+//}
+//
+//char CircleBuffer_isfull(char type_of_cb) {
+//    if (type_of_cb == CIRCLE_BUFFER_TX) {
+//        return circleBuffer_tx.num_of_elements >= MAX_BUFFER_LENGTH;
+//    } else if (type_of_cb == CIRCLE_BUFFER_RX) {
+//        return circleBuffer_rx.num_of_elements >= MAX_BUFFER_LENGTH;
+//    } else if (type_of_cb == CIRCLE_BUFFER_MSG) {
+//        return circleBuffer_msg.num_of_elements >= PACKETBUFFERSIZE;
+//    }
+//}
+//
+//unsigned short CircleBuffer_length(char type_of_cb) {
+//    if (type_of_cb == CIRCLE_BUFFER_TX) {
+//        return circleBuffer_tx.num_of_elements;
+//    } else if (type_of_cb == CIRCLE_BUFFER_RX) {
+//        return circleBuffer_rx.num_of_elements;
+//    } else if (type_of_cb == CIRCLE_BUFFER_MSG) {
+//        return circleBuffer_msg.num_of_elements;
+//    }
+//}
+//
+//
+//#ifdef PROTOCOL_TESTHARNESS
+//
+//int main() {
+//    BOARD_Init();
+//    Protocol_Init();
+//    LEDS_INIT();
+//
+//    char test_message[MAXPAYLOADLENGTH];
+//    sprintf(test_message, "Protocol test message time at %s %s", __TIME__, __DATE__);
+//    Protocol_SendDebugMessage(test_message);
+//    Protocol_SendMessage(5, ID_DEBUG, "hello");
+//
+//
+//    // unsigned int payload;
+//    unsigned char saved_next_id;
+//    unsigned int payload = 0;
+//    while (1) {
+//        if (Protocol_IsMessageAvailable()) {
+//            saved_next_id = Protocol_ReadNextID();
+//            if (saved_next_id == ID_PING) {
+//                Protocol_GetPayload(&payload);
+//                payload = Protocol_IntEndednessConversion(payload);
+//                payload = payload >> 1;
+//                payload = Protocol_IntEndednessConversion(payload);
+//                Protocol_SendMessage(4, ID_PONG, &payload);
+//            }
+//            // Protocol_IsError();
+//        }
+//
+//
+//    }
+//    while (1);
+//    BOARD_End();
+//}
+//
+//#endif
+
+
 #include "BOARD.h"
 #include <xc.h>
 #include "Protocol.h"
@@ -29,7 +662,8 @@
 /* These are some static declarations used throughout the code*/
 static int collision;
 static int putCharFlag;
-static int counter, index;
+static unsigned char counter;
+static unsigned char index;
 static int clear;
 static unsigned char packHEAD;
 static unsigned char packLENGTH;
@@ -41,6 +675,7 @@ static unsigned char ledValue;
 static int pongFlag;
 static int servoFlag;
 static int appFlag;
+static int msgAvail;
 
 unsigned int rc_PL1;
 unsigned int rc_PL2;
@@ -71,6 +706,9 @@ typedef enum {
 static states MODE = WAIT_FOR_HEAD;
 
 int Protocol_Init(void) {
+    init_buff(&TXCB);
+    init_buff(&RXCB);
+    init_buff(&PLCB);
     U1MODE = 0; // Clear mode register
     U1STA = 0; // clear status register
     U1BRG = BaudRate; // set the baud rate
@@ -169,7 +807,14 @@ int Protocol_GetPayload(void* payload) {
 }
 
 char Protocol_IsMessageAvailable(void) {
-    if (check_EmptyRX(&PLCB) == 1) {
+    //    if (check_EmptyRX(&PLCB) == 1) {
+    //    if (msgAvail == 1) {
+    //        msgAvail = 0;
+    //        return TRUE;
+    //    } else { 
+    //        return FALSE;
+    //    }
+    if (check_EmptyBuff(&RXCB) == 0) {
         return FALSE;
     } else {
         return TRUE;
@@ -279,6 +924,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 }
             } else if (packID == ID_LAB2_INPUT_SELECT) {
                 packPAYLOAD[index] = charIn;
+                enqueue_CB(charIn, &RXCB);
                 appFlag = 1;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 counter++;
@@ -286,6 +932,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 MODE = GET_TAIL;
             } else if (pongFlag == 1) {
                 packPAYLOAD[counter] = charIn;
+                enqueue_CB(charIn, &RXCB);
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 counter++;
                 if (counter == 4) { // 4 = length of PING payload - 1
@@ -293,13 +940,15 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 }
             } else { // if ID is not some special case, process payload 
                 packPAYLOAD[index] = charIn;
+                enqueue_CB(charIn, &RXCB);
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
-                if (counter == (packLENGTH - 1)) { // packLENGTH - 1 because we already processed the ID
+                if (counter == (packLENGTH - 2)) { // packLENGTH - 1 because we already processed the ID
                     MODE = GET_TAIL;
+                } else {
+                    counter++;
+                    index++;
+                    MODE = GET_PAYLOAD; // re-process payload until 1 of the above cases are met
                 }
-                counter++;
-                index++;
-                MODE = GET_PAYLOAD; // re-process payload until 1 of the above cases are met
             }
             break;
 
@@ -345,9 +994,9 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             } else if (appFlag == 1) {
                 APP_PL = packPAYLOAD[1];
                 MODE = WAIT_FOR_HEAD;
-            }else {
-
-                enqueue_Payload(packPAYLOAD, packLENGTH, &PLCB);
+            } else {
+                msgAvail = 1;
+                //enqueue_Payload(packPAYLOAD, packLENGTH - 1, PLCB);
                 //MODE = GET_END1;
                 MODE = WAIT_FOR_HEAD;
             }
@@ -497,6 +1146,9 @@ int main(void) {
     while (1);
 }
 #endif
+
+
+
 
 
 // is this saving properly!!

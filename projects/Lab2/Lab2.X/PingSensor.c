@@ -1,4 +1,5 @@
 #include <proc/p32mx340f512h.h>
+#include <proc/PIC32MX/p32mx340f512h.h>
 #include <sys/attribs.h>
 #include "PingSensor.h"
 #include "Protocol.h"

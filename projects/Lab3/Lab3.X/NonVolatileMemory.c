@@ -74,7 +74,7 @@ unsigned char NonVolatileMemory_ReadByte(int address) {
 
     theData = I2C1RCV; // Receive data from device
     while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
-    
+
     I2C1CONbits.ACKDT = 1; // initiate NACK
     I2C1CONbits.ACKEN = 1; // initiate ACK sequence
     //  while (I2C1STATbits.ACKSTAT == 1); // wait for RX to complete
@@ -116,12 +116,12 @@ char NonVolatileMemory_WriteByte(int address, unsigned char data) {
 
     I2C1TRN = data; // send data to be stored
     while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
-   // while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
+    // while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
     LEDS_SET(0b00111100);
 
     I2C1CONbits.PEN = 1; // initiate stop condition. NACK
     while (I2C1CONbits.PEN == 1); // wait for this to complete
-     LEDS_SET(0b11111111);
+    LEDS_SET(0b11111111);
 
     return SUCCESS;
 
@@ -136,7 +136,62 @@ char NonVolatileMemory_WriteByte(int address, unsigned char data) {
  * @brief reads bytes in page mode, up to 64 at once
  * @warning Default value for this EEPROM is 0xFF */
 int NonVolatileMemory_ReadPage(int page, char length, unsigned char data[]) {
-    /* IDK do some shit */
+    //unsigned char theData;
+    char i;
+    I2C1CONbits.SEN = 1; // send START
+    while (I2C1CONbits.SEN == 1); // wait for start to finish
+    // while (I2C1STATbits.);
+    LEDS_SET(0b10000000);
+
+    I2C1TRN = 0b10100000; // send 7-bit slave addy and R/W = 0
+    while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
+    //   I2C1CONbits.ACKEN = 0; // initiate ACK sequence
+    //   while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
+    LEDS_SET(0b10000001);
+
+    I2C1TRN = page >> 8; // send memory address high byte
+    while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
+    //    while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
+    LEDS_SET(0b10001111);
+
+    I2C1TRN = page; // send memory address low byte
+    while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
+    //  while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
+    LEDS_SET(0b00011000);
+
+    I2C1CONbits.SEN = 1; // SEND REPEATED START
+    while (I2C1CONbits.SEN == 1);
+    I2C1TRN = 0b10100001; // send 7-bit slave addy and R/W = 1
+    while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
+    //  while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
+    LEDS_SET(0b11111111);
+
+    //    I2C1CONbits.RCEN = 1; // enable Rx bit
+    //    while (I2C1CONbits.RCEN == 1); // wait for Rx to finish
+    //    LEDS_SET(0b00011111);
+
+    for (i = 0; i < length; i++) {
+        I2C1CONbits.RCEN = 1; // enable Rx bit
+        while (I2C1CONbits.RCEN == 1); // wait for Rx to finish
+        data[i] = I2C1RCV; // Receive data from device
+        while (I2C1CONbits.RCEN == 1); // wait for Rx to finish
+        //        while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
+
+        if (i < length - 1) {
+            I2C1CONbits.ACKDT = 0; // initiate ACK
+            I2C1CONbits.ACKEN = 1; // initiate ACK sequence
+            while (I2C1CONbits.ACKEN == 1); // wait for Rx to finish
+        } else {
+            I2C1CONbits.ACKDT = 1; // initiate NACK
+            I2C1CONbits.ACKEN = 1; // initiate ACK sequence
+            while (I2C1CONbits.ACKEN == 1); // wait for Rx to finish
+            //  while (I2C1STATbits.ACKSTAT == 1); // wait for RX to complete
+            LEDS_SET(0b00011000);
+        }
+    }
+
+    I2C1CONbits.PEN = 1; // initiate stop condition. NACK
+    while (I2C1CONbits.PEN == 1); // wait for this to complete
     return SUCCESS;
 }
 
@@ -160,7 +215,8 @@ int main(void) {
     Protocol_Init();
     LEDS_INIT();
     unsigned char bitchassData = 0b1111;
-    int theaddy = 0x2345;
+    int theaddy;
+    int *addressPayload;
     int dataOut;
     // ID_NVM_WRITE_BYTE	0X CC 06 98 00 00 00 00 00 B9 C4 0D 0A
     // ID_NVM_READ_BYTE	    0X CC 05 96 00 00 00 00 B9 69 0D 0A
@@ -168,22 +224,27 @@ int main(void) {
     int i;
 
     while (1) {
-        //        if (Protocol_IsMessageAvailable() == TRUE) {
-        //            NVM_ID = Protocol_ReadNextID();
-        //            if (NVM_ID == ID_NVM_READ_BYTE) {
-        //    LEDS_SET(0b1001);
-       // dataOut = NonVolatileMemory_ReadByte(theaddy);
-        //            } else if (NVM_ID == ID_NVM_WRITE_BYTE) {
-        //                LEDS_SET(0b1111);
-        //            }
-        //        }
-//        for (i = 0; i < 10000; i++) {
-//            asm("nop");
-//        }
-         NonVolatileMemory_WriteByte(dataOut, bitchassData);
-         for (i = 0; i < 10000; i++) {
+       
+        if (Protocol_IsMessageAvailable() == TRUE) {
+            LEDS_SET(0b11111111);
+            NVM_ID = Protocol_ReadNextID();
+            if (NVM_ID == ID_NVM_READ_BYTE) {
+                Protocol_GetPayload(addressPayload);
+                LEDS_SET(0b1001);
+                dataOut = NonVolatileMemory_ReadByte((int)addressPayload);
+                dataOut = Protocol_IntEndednessConversion(dataOut);
+                Protocol_SendMessage(sizeof(dataOut), ID_NVM_READ_BYTE_RESP, &dataOut);
+            } else if (NVM_ID == ID_NVM_WRITE_BYTE) {
+               // LEDS_SET(0b1111);
+            }
+        }
+        for (i = 0; i < 10000; i++) {
             asm("nop");
         }
+        //        NonVolatileMemory_WriteByte(dataOut, bitchassData);
+        //        for (i = 0; i < 10000; i++) {
+        //            asm("nop");
+        //        }
     }
 
     while (1);
