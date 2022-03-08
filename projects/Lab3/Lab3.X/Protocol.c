@@ -675,7 +675,12 @@ static unsigned char ledValue;
 static int pongFlag;
 static int servoFlag;
 static int appFlag;
+
 static int msgAvail;
+unsigned char currentLENGTH;
+unsigned char currentID;
+unsigned char Lab3PL[MAXPAYLOADLENGTH];
+unsigned char ii;
 
 unsigned int rc_PL1;
 unsigned int rc_PL2;
@@ -699,7 +704,7 @@ int check_EmptyRX(struct CircleBuffer *buff);
 /* These are the states in the RXSM */
 typedef enum {
     WAIT_FOR_HEAD, GET_LENGTH, GET_ID, GET_PAYLOAD, GET_TAIL,
-    COMPARE_CHECKSUMS, DETERMINE_RESPONSE, GET_END1, GET_END2
+    COMPARE_CHECKSUMS, LAB3_STATE, GET_END1, GET_END2
 } states;
 
 /* Initializing the first state */
@@ -797,28 +802,30 @@ int Protocol_SendDebugMessage(char *Message) {
 }
 
 unsigned char Protocol_ReadNextID(void) {
-    unsigned char thisID = returnID(&PLCB);
-    return thisID;
+    return currentID;
+    //    unsigned char thisID = returnID(&PLCB);
+    //    return thisID;
 }
 
 int Protocol_GetPayload(void* payload) {
-    dequeue_Payload(payload, &PLCB);
+    // dequeue_Payload(payload, &packPAYLOAD);
+    memcpy(payload, packPAYLOAD, sizeof(packPAYLOAD));
     return SUCCESS;
 }
 
 char Protocol_IsMessageAvailable(void) {
     //    if (check_EmptyRX(&PLCB) == 1) {
-    //    if (msgAvail == 1) {
-    //        msgAvail = 0;
-    //        return TRUE;
-    //    } else { 
-    //        return FALSE;
-    //    }
-    if (check_EmptyBuff(&RXCB) == 0) {
-        return FALSE;
-    } else {
+    if (msgAvail == 1) {
+        msgAvail = 0;
         return TRUE;
+    } else {
+        return FALSE;
     }
+    //    if (check_EmptyBuff(&RXCB) == 1) {
+    //        return FALSE;
+    //    } else {
+    //        return TRUE;
+    //    }
 }
 
 char Protocol_IsQueueFull(void) {
@@ -879,6 +886,8 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 packID = 0;
                 packCHECKSUM = 0;
                 counter = 0;
+                ii = 0;
+                currentLENGTH = 0;
                 index = 0;
                 ledValue = 0;
                 packLEDS = 0;
@@ -888,6 +897,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
         case GET_LENGTH:
             packLENGTH = charIn; // save the length
+            currentLENGTH = charIn;
             MODE = GET_ID;
             break;
 
@@ -898,6 +908,9 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
             if (packID == ID_LEDS_GET) { // check for special case that has no payload
                 MODE = GET_TAIL;
+            } else if ((packID == ID_NVM_WRITE_BYTE) || (packID == ID_NVM_READ_BYTE)) {
+                MODE = LAB3_STATE;
+
             } else {
                 MODE = GET_PAYLOAD;
             }
@@ -996,9 +1009,35 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
                 MODE = WAIT_FOR_HEAD;
             } else {
                 msgAvail = 1;
+                currentID = packID;
                 //enqueue_Payload(packPAYLOAD, packLENGTH - 1, PLCB);
                 //MODE = GET_END1;
                 MODE = WAIT_FOR_HEAD;
+            }
+            break;
+
+        case LAB3_STATE:
+
+            if (packID == ID_NVM_WRITE_BYTE) {
+                Lab3PL[ii] = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                if (ii < packLENGTH - 2) {
+                    MODE = LAB3_STATE;
+                    ii++;
+
+                } else {
+                    MODE = GET_TAIL;
+                }
+            } else if (packID == ID_NVM_READ_BYTE) {
+                Lab3PL[ii] = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                if (ii < packLENGTH - 2) {
+                    MODE = LAB3_STATE;
+                    ii++;
+
+                } else {
+                    MODE = GET_TAIL;
+                }
             }
             break;
 
