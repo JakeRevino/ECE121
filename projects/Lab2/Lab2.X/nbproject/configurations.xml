@@ -4,14 +4,14 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/BOARD.h</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/FreeRunningTimer.h</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/MessageIDs.h</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/PingSensor.h</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/Protocol.h</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/RCServo.h</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/include/RotaryEncoder.h</itemPath>
       <itemPath>circleBuff.h</itemPath>
+      <itemPath>BOARD.h</itemPath>
+      <itemPath>FreeRunningTimer.h</itemPath>
+      <itemPath>MessageIDs.h</itemPath>
+      <itemPath>PingSensor.h</itemPath>
+      <itemPath>Protocol.h</itemPath>
+      <itemPath>RCServo.h</itemPath>
+      <itemPath>RotaryEncoder.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -20,14 +20,14 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/BOARD.c</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/FreeRunningTimer.c</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/Lab2Application.c</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/PingSensor.c</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/Protocol.c</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/RCServo.c</itemPath>
-      <itemPath>C:/Users/jrev1/OneDrive/Desktop/jrevino-master/projects/Lab2/Lab2.X/RotaryEncoder.c</itemPath>
       <itemPath>circleBuff.c</itemPath>
+      <itemPath>BOARD.c</itemPath>
+      <itemPath>FreeRunningTimer.c</itemPath>
+      <itemPath>Lab2Application.c</itemPath>
+      <itemPath>PingSensor.c</itemPath>
+      <itemPath>Protocol.c</itemPath>
+      <itemPath>RCServo.c</itemPath>
+      <itemPath>RotaryEncoder.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
