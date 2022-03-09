@@ -908,7 +908,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
             if (packID == ID_LEDS_GET) { // check for special case that has no payload
                 MODE = GET_TAIL;
-            } else if ((packID == ID_NVM_WRITE_BYTE) || (packID == ID_NVM_READ_BYTE)) {
+            } else if ((packID == ID_NVM_WRITE_BYTE) || (packID == ID_NVM_READ_BYTE) || (packID == ID_NVM_WRITE_PAGE) || (packID == ID_NVM_READ_PAGE)) {
                 MODE = LAB3_STATE;
 
             } else {
@@ -1019,6 +1019,26 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
         case LAB3_STATE:
 
             if (packID == ID_NVM_WRITE_BYTE) {
+                Lab3PL[ii] = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                if (ii < packLENGTH - 2) {
+                    MODE = LAB3_STATE;
+                    ii++;
+
+                } else {
+                    MODE = GET_TAIL;
+                }
+            }  if (packID == ID_NVM_READ_PAGE) {
+                Lab3PL[ii] = charIn;
+                packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
+                if (ii < packLENGTH - 2) {
+                    MODE = LAB3_STATE;
+                    ii++;
+
+                } else {
+                    MODE = GET_TAIL;
+                }
+            }  if (packID == ID_NVM_WRITE_PAGE) {
                 Lab3PL[ii] = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);
                 if (ii < packLENGTH - 2) {
