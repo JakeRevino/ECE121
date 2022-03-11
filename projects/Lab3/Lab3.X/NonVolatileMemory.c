@@ -192,7 +192,6 @@ int NonVolatileMemory_ReadPage(int page, char length, unsigned char data[]) {
         while (I2C1CONbits.RCEN == 1); // wait for Rx to finish
         data[i] = I2C1RCV; // Receive data from device
         while (I2C1CONbits.RCEN == 1); // wait for Rx to finish
-        //        while (I2C1STATbits.TRSTAT == 1); // wait for TX to finish
 
         if (i < length - 1) {
             I2C1CONbits.ACKDT = 0; // initiate ACK
@@ -202,8 +201,6 @@ int NonVolatileMemory_ReadPage(int page, char length, unsigned char data[]) {
             I2C1CONbits.ACKDT = 1; // initiate NACK
             I2C1CONbits.ACKEN = 1; // initiate ACK sequence
             while (I2C1CONbits.ACKEN == 1); // wait for Rx to finish
-            //  while (I2C1STATbits.ACKSTAT == 1); // wait for RX to complete
-            //LEDS_SET(0b00011000);
         }
     }
 
@@ -275,7 +272,6 @@ int main(void) {
     int dataOut;
     // ID_NVM_WRITE_BYTE	0XCC 06 98 00010BC6 56 B9 E0 0D0A
     //ID_NVM_WRITE_BYTE_ACK	0X         00010BC6 56
-    //0XCC459C00000503CB05C41737831D5B99204EE435F24D12A6F5C288A994C2EC58A11D4CC9C5D598F0F160AD39709F9FAF27B4997D4317C77EAA971643D52D289BE0444D347C0903B9130D0A
 
     unsigned char NVM_ID;
     int i;
@@ -283,10 +279,6 @@ int main(void) {
     while (1) {
 
         if (Protocol_IsMessageAvailable() == TRUE) {
-            // LEDS_SET(0b11111111);
-            // NVM_ID = Protocol_ReadNextID();
-            // 0000AE1C41
-// 000004C1 17D84026F2C20D5358F57C57A55A84649180403BC17D181920D132F4E1FE879BB9D0858FAEF2BC40CC69D5A88D1CC70A83740D5509628BEBA443AE
             if (currentID == ID_NVM_READ_BYTE) {
                 ReadByte.data = Protocol_IntEndednessConversion((int) Lab3PL);
                 unsigned char thedata = NonVolatileMemory_ReadByte(ReadByte.data);
