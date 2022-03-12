@@ -15,15 +15,15 @@ extern short weightsPL[MAXPAYLOADLENGTH];
 static signed short FilterBuffer[NUMBEROFCHANNELS][FILTERLENGTH];
 
 static struct {
-    short tail;
-    short head;
-    short data[NUMBEROFCHANNELS][FILTERLENGTH];
+    signed short tail;
+    signed short head;
+    signed short data[NUMBEROFCHANNELS][FILTERLENGTH];
 } DataBuffer;
 
 static struct {
-    short tail;
-    short head;
-    short data[NUMBEROFCHANNELS][FILTERLENGTH];
+    signed short tail;
+    signed short head;
+    signed short data[NUMBEROFCHANNELS][FILTERLENGTH];
 } FilteredBuffer;
 
 /**
@@ -93,13 +93,6 @@ int ADCFilter_Init(void) {
  * @return un-filtered AD Value
  * @brief returns current reading for desired channel */
 short ADCFilter_RawReading(short pin) {
-    //    short currentReading;
-    //    if (DataBuffer.tail != 0) {
-    //        currentReading = DataBuffer.data[pin][DataBuffer.head];
-    //    } else {
-    //        currentReading = DataBuffer.data[pin][FILTERLENGTH - 1];
-    //    }
-    //    return currentReading;
     return DataBuffer.data[pin][DataBuffer.head];
 }
 
@@ -124,12 +117,13 @@ short ADCFilter_FilteredReading(short pin) {
  * @warning returns a short but internally calculated value should be an int */
 short ADCFilter_ApplyFilter(short filter[], short values[], short startIndex) {
     int i;
-    // int product;
     int sum = 0;
     for (i = 0; i < FILTERLENGTH; i++) {
         sum += filter[i] * values[startIndex];
-        //sum = sum + product;
-        startIndex = (startIndex + 1) % 32;
+        startIndex = (startIndex - 1); // might need to decrement instead of increment
+        if (startIndex < 0) {
+            startIndex = 31;
+        }
     }
     short result = sum >> 15;
     return result;
@@ -144,22 +138,17 @@ short ADCFilter_ApplyFilter(short filter[], short values[], short startIndex) {
 int ADCFilter_SetWeights(short pin, short weights[]) {
     for (int i = 0; i < FILTERLENGTH; i++) {
         FilteredBuffer.data[pin][i] = weights[i];
-
     }
     return SUCCESS;
 }
 
 void __ISR(_ADC_VECTOR) ADCIntHandler(void) {
     IFS1bits.AD1IF = 0; // clear interrupt flag
-    DataBuffer.head = (DataBuffer.head + 1) % 32;
-    DataBuffer.data[0][DataBuffer.head] = ADC1BUF0;
+    DataBuffer.head = (DataBuffer.head + 1) % 32; // increment the head of the data buffer
+    DataBuffer.data[0][DataBuffer.head] = ADC1BUF0; // store data into data buffer
     DataBuffer.data[1][DataBuffer.head] = ADC1BUF1;
     DataBuffer.data[2][DataBuffer.head] = ADC1BUF2;
     DataBuffer.data[3][DataBuffer.head] = ADC1BUF3;
-
-    // copy data in ADC buffer (for each channel) into 2D array
-    //You will need to index into the array such
-    //that you keep only the last FILTERLENGTH samples for each channel.
 }
 
 #ifdef ADCFILTER_TEST
@@ -178,7 +167,7 @@ int main(void) {
     struct READING {
         short rawReading;
         short filterReading;
-        char ReturnBuffer[32];
+        unsigned char ReturnBuffer[32];
     } ADCReading;
 
     unsigned int currentMilli;
@@ -186,44 +175,42 @@ int main(void) {
     currentMilli = FreeRunningTimer_GetMilliSeconds();
     previousMilli = currentMilli;
 
-    short j;
+    int j;
     short currentChannel = 0;
-    short filterValues[32];
+    signed short filterValues[32];
     short newFilterVal[FILTERLENGTH];
 
     while (1) {
         if (Protocol_IsMessageAvailable() == TRUE) {
             unsigned char thisID = Protocol_ReadNextID();
             if (thisID == ID_ADC_FILTER_VALUES) {
-                // LEDS_SET(0b1111);
-                //Protocol_SendMessage(65, ID_DEBUG, &Lab3PL);
+                Protocol_SendMessage(65, ID_ADC_FILTER_VALUES_RESP, &Lab3PL);
                 for (j = 0; j < 32; j++) {
-                    filterValues[j] = Protocol_ShortEndednessConversion(weightsPL[j]);
-                    //newFilterVal[j] = filterValues[j+1] >> 8;
+                    //weightsPL[j] = Protocol_ShortEndednessConversion(weightsPL[j]);
+                     filterValues[j] = Protocol_ShortEndednessConversion(Lab3PL[j]);
                 }
-              //  newFilterVal[0] = 
-               // Protocol_SendMessage(65, ID_DEBUG, &filterValues);
-                ADCFilter_SetWeights(currentChannel, filterValues);
-               //  Protocol_SendMessage(65, ID_DEBUG, &filterValues);
                 Protocol_SendMessage(65, ID_ADC_FILTER_VALUES_RESP, &filterValues);
+                //  newFilterVal[0] = 
+                // Protocol_SendMessage(65, ID_DEBUG, &filterValues);
+                //ADCFilter_SetWeights(currentChannel, weightsPL);
+              //   ADCFilter_SetWeights(currentChannel, Lab3PL);
+                //  Protocol_SendMessage(65, ID_DEBUG, &filterValues);
+               // Protocol_SendMessage(32, ID_ADC_FILTER_VALUES_RESP, &weightsPL);
             } else if (thisID == ID_ADC_SELECT_CHANNEL) {
-                currentChannel = Lab3PL[1];
+                currentChannel = Lab3PL[0];
                 Protocol_SendMessage(2, ID_ADC_SELECT_CHANNEL_RESP, &Lab3PL);
             }
         }
         currentMilli = FreeRunningTimer_GetMilliSeconds();
 
-        // running perfectly
-        if ((currentMilli - previousMilli) >= 500) {
-            ADCReading.rawReading = ADCFilter_RawReading(currentChannel); //Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
-            ADCReading.filterReading = ADCFilter_FilteredReading(currentChannel); //Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
-            ADCReading.ReturnBuffer[0] =  (ADCReading.rawReading >> 8) & 0xFF;
-            ADCReading.ReturnBuffer[1] =  (ADCReading.rawReading >> 0) & 0xFF;
-            ADCReading.ReturnBuffer[2] =  (ADCReading.filterReading >> 8) & 0xFF;
-            ADCReading.ReturnBuffer[3] =  (ADCReading.filterReading >> 0) & 0xFF;
-            Protocol_SendMessage(5, ID_ADC_READING, &(ADCReading.ReturnBuffer));
-            
-       //     Protocol_SendMessage(4, ID_ADC_READING, &ADCReading);
+        if ((currentMilli - previousMilli) >= 10) {
+            ADCReading.rawReading = Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
+            ADCReading.filterReading = Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
+            ADCReading.ReturnBuffer[0] = (ADCReading.rawReading >> 8) & 0xFF;
+            ADCReading.ReturnBuffer[1] = (ADCReading.rawReading >> 0) & 0xFF;
+            ADCReading.ReturnBuffer[2] = (ADCReading.filterReading >> 8) & 0xFF;
+            ADCReading.ReturnBuffer[3] = (ADCReading.filterReading >> 0) & 0xFF;
+           // Protocol_SendMessage(5, ID_ADC_READING, &(ADCReading.ReturnBuffer));
             previousMilli = currentMilli;
 
         }
