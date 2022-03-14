@@ -1,5 +1,5 @@
 build/default/production/ADCFilter.o: ADCFilter.c ADCFilter.h \
- MessageIDs.h Protocol.h BOARD.h FreeRunningTimer.h
+ MessageIDs.h Protocol.h BOARD.h FreeRunningTimer.h FrequencyGenerator.h
 
 ADCFilter.h:
 
@@ -10,3 +10,5 @@ Protocol.h:
 BOARD.h:
 
 FreeRunningTimer.h:
+
+FrequencyGenerator.h:

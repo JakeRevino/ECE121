@@ -6,13 +6,14 @@
 #include "Protocol.h"
 #include "BOARD.h"
 #include "FreeRunningTimer.h"
+#include "FrequencyGenerator.h"
 
 #define NUMBEROFCHANNELS 4
 
-extern char Lab3PL[MAXPAYLOADLENGTH];
-extern short weightsPL[MAXPAYLOADLENGTH];
+extern char Lab3PL[65];
+extern short weightsPL[32];
 
-static signed short FilterBuffer[NUMBEROFCHANNELS][FILTERLENGTH];
+//static signed short FilterBuffer[NUMBEROFCHANNELS][FILTERLENGTH];
 
 static struct {
     signed short tail;
@@ -144,11 +145,12 @@ int ADCFilter_SetWeights(short pin, short weights[]) {
 
 void __ISR(_ADC_VECTOR) ADCIntHandler(void) {
     IFS1bits.AD1IF = 0; // clear interrupt flag
-    DataBuffer.head = (DataBuffer.head + 1) % 32; // increment the head of the data buffer
+
     DataBuffer.data[0][DataBuffer.head] = ADC1BUF0; // store data into data buffer
     DataBuffer.data[1][DataBuffer.head] = ADC1BUF1;
     DataBuffer.data[2][DataBuffer.head] = ADC1BUF2;
     DataBuffer.data[3][DataBuffer.head] = ADC1BUF3;
+    DataBuffer.head = (DataBuffer.head + 1) % 32; // increment the head of the data buffer
 }
 
 #ifdef ADCFILTER_TEST
@@ -158,16 +160,17 @@ int main(void) {
     Protocol_Init();
     ADCFilter_Init();
     FreeRunningTimer_Init();
+    FrequencyGenerator_Init();
     LEDS_INIT();
 
     char alive_message[MAXPAYLOADLENGTH];
     sprintf(alive_message, "ADC filter message time at %s %s.     BTW, Jake is so cool!", __TIME__, __DATE__);
     Protocol_SendDebugMessage(alive_message);
 
-    struct READING {
+    struct {
         short rawReading;
         short filterReading;
-        unsigned char ReturnBuffer[32];
+        //  short ReturnBuffer[4];
     } ADCReading;
 
     unsigned int currentMilli;
@@ -175,42 +178,80 @@ int main(void) {
     currentMilli = FreeRunningTimer_GetMilliSeconds();
     previousMilli = currentMilli;
 
+    short LowPass[32] = {-54, -64, -82, -97, -93, -47, 66, 266, 562, 951, 1412, 1909, 2396, 2821, 3136, 3304, 3304, 3136, 2821, 2396, 1909, 1412, 951, 562, 266, 66, -47, -93, -97, -82, -64, -54};
+    short HighPass[32] = {0, 0, 39, -91, 139, -129, 0, 271, -609, 832, -696, 0, 1297, -3011, 4755, -6059, 6542, -6059, 4755, -3011, 1297, 0, -696, 832, -609, 271, 0, -129, 139, -91, 39, 0};
+    short BandPass[32] = {73, -88, -90, 49, -74, 294, 569, -786, -781, 384, -514, 1899, 3608, -5354, -6787, 7595, 7595, -6787, -5354, 3608, 1899, -514, 384, -781, -786, 569, 294, -74, 49, -90, -88, 73};
+
     int j;
+    int index;
+    int on = 0;
     short currentChannel = 0;
-    signed short filterValues[32];
+    short filterValues[32];
     short newFilterVal[FILTERLENGTH];
+    short ReturnBuffer[2];
 
     while (1) {
         if (Protocol_IsMessageAvailable() == TRUE) {
             unsigned char thisID = Protocol_ReadNextID();
             if (thisID == ID_ADC_FILTER_VALUES) {
-                Protocol_SendMessage(65, ID_ADC_FILTER_VALUES_RESP, &Lab3PL);
-                for (j = 0; j < 32; j++) {
-                    //weightsPL[j] = Protocol_ShortEndednessConversion(weightsPL[j]);
-                     filterValues[j] = Protocol_ShortEndednessConversion(Lab3PL[j]);
+                j = 0;
+                //                for (index = 0; index < FILTERLENGTH; index++) {
+                //                    newFilterVal[index] = ((Lab3PL[j] << 8) | (Lab3PL[j + 1]));
+                //                    j = j + 2;
+                //                }
+                //                for (int i = 0; i < 32; i++) {
+                //                    newFilterVal[i] = Protocol_ShortEndednessConversion(newFilterVal[i]);
+                //                }
+
+                // Protocol_SendMessage(sizeof (newFilterVal) + 1, ID_ADC_FILTER_VALUES_RESP, &newFilterVal);
+                //  Protocol_SendMessage(sizeof(weightsPL), ID_ADC_FILTER_VALUES_RESP, &weightsPL);
+                //                for (j = 0; j < FILTERLENGTH; j++) {
+                //                    //  weightsPL[j] = Protocol_ShortEndednessConversion(weightsPL[j]);
+                //                    newFilterVal[j] = Protocol_ShortEndednessConversion(newFilterVal[j]);
+                //                }
+                if (Lab3PL[0] == -1) {
+                    ADCFilter_SetWeights(currentChannel, LowPass);
+                    Protocol_SendMessage(sizeof (LowPass) + 1, ID_ADC_FILTER_VALUES_RESP, &LowPass);
+                } else if (Lab3PL[1] == 0) {
+                    ADCFilter_SetWeights(currentChannel, HighPass);
+                    Protocol_SendMessage(sizeof (HighPass) + 1, ID_ADC_FILTER_VALUES_RESP, &HighPass);
+                } else if (Lab3PL[1] == 73) {
+                    ADCFilter_SetWeights(currentChannel, BandPass);
+                    Protocol_SendMessage(sizeof (BandPass) + 1, ID_ADC_FILTER_VALUES_RESP, &BandPass);
                 }
-                Protocol_SendMessage(65, ID_ADC_FILTER_VALUES_RESP, &filterValues);
-                //  newFilterVal[0] = 
-                // Protocol_SendMessage(65, ID_DEBUG, &filterValues);
-                //ADCFilter_SetWeights(currentChannel, weightsPL);
-              //   ADCFilter_SetWeights(currentChannel, Lab3PL);
-                //  Protocol_SendMessage(65, ID_DEBUG, &filterValues);
-               // Protocol_SendMessage(32, ID_ADC_FILTER_VALUES_RESP, &weightsPL);
+
             } else if (thisID == ID_ADC_SELECT_CHANNEL) {
                 currentChannel = Lab3PL[0];
                 Protocol_SendMessage(2, ID_ADC_SELECT_CHANNEL_RESP, &Lab3PL);
+
+            } else if (thisID == ID_LAB3_FREQUENCY_ONOFF) {
+                if (Lab3PL[0] == 1) {
+                    FrequencyGenerator_On();
+                    LEDS_SET(0b11011);
+                } else {
+                    FrequencyGenerator_Off();
+                    LEDS_SET(0b01);
+                }
+                Protocol_SendMessage(2, ID_ADC_FILTER_VALUES_RESP, &Lab3PL);
             }
         }
         currentMilli = FreeRunningTimer_GetMilliSeconds();
 
         if ((currentMilli - previousMilli) >= 10) {
-            ADCReading.rawReading = Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
-            ADCReading.filterReading = Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
-            ADCReading.ReturnBuffer[0] = (ADCReading.rawReading >> 8) & 0xFF;
-            ADCReading.ReturnBuffer[1] = (ADCReading.rawReading >> 0) & 0xFF;
-            ADCReading.ReturnBuffer[2] = (ADCReading.filterReading >> 8) & 0xFF;
-            ADCReading.ReturnBuffer[3] = (ADCReading.filterReading >> 0) & 0xFF;
-           // Protocol_SendMessage(5, ID_ADC_READING, &(ADCReading.ReturnBuffer));
+            //            ADCReading.rawReading = Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
+            //            ADCReading.filterReading = Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
+            //            ReturnBuffer[0] = (ADCReading.rawReading << 8) & 0xFF;
+            //            ReturnBuffer[1] = (ADCReading.rawReading) & 0xFF;
+            //            ReturnBuffer[2] = (ADCReading.filterReading << 8) & 0xFF;
+            //            ReturnBuffer[3] = (ADCReading.filterReading) & 0xFF;
+            //ReturnBuffer[0] = ADCFilter_RawReading(currentChannel);
+            ReturnBuffer[0] = Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
+            //ReturnBuffer[1] = ADCFilter_FilteredReading(currentChannel);
+            ReturnBuffer[1] = Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
+            Protocol_SendMessage(5, ID_ADC_READING, &ReturnBuffer);
+            //            for (int n = 0; n < 100; n++) {
+            //                asm("nop");
+            //            }
             previousMilli = currentMilli;
 
         }

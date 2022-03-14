@@ -153,40 +153,31 @@ void __ISR(_INPUT_CAPTURE_3_VECTOR) __IC3Interrupt(void) {
         IFS0bits.IC3IF = 0;
         LEDS_SET(0x01);
 
-
-
         switch (state) {
             case RISING:
-                if (PORTDbits.RD10 == 1) {
+                if (PORTDbits.RD10 == 1) { // check if PORT is high
                     LEDS_SET(0x11);
-                    IC_RisingEdge = (0xFFFF & IC3BUF);
-                    state = FALLING;
+                    IC_RisingEdge = (0xFFFF & IC3BUF); // record value
+                    state = FALLING; // next we have to look for the falling edge
                 } else {
                     LEDS_SET(0x10);
-                    state = RISING;
+                    state = RISING; // PORT was low so we are still looking for a Rising edge
                 }
-
                 break;
 
             case FALLING:
-                if (PORTDbits.RD10 == 0) {
+                if (PORTDbits.RD10 == 0) { // read the PORT
                     LEDS_SET(0x1111);
-                    IC_FallingEdge = (0xFFFF & IC3BUF);
-                    if (IC_FallingEdge < IC_RisingEdge) {
-                        dT = 0xFFFF - IC_FallingEdge + IC_RisingEdge;
+                    IC_FallingEdge = (0xFFFF & IC3BUF); // record the value
+                    if (IC_FallingEdge < IC_RisingEdge) { // check for the wrap around
+                        dT = 0xFFFF - IC_FallingEdge + IC_RisingEdge; // calculate dT and adjust according to wrap around
                     } else {
                         LEDS_SET(0x1001);
-                        dT = IC_FallingEdge - IC_RisingEdge;
+                        dT = IC_FallingEdge - IC_RisingEdge; // no wrap around so just calculate dT
                     }
-
-                    // distance = Protocol_IntEndednessConversion(TEMP_distance);
-
-                    //Data.message[0] = PingSensor_GetDistance();
-                    //  Protocol_SendDebugMessage((unsigned char*)distance);
-
                 }
-                distance = ((340 * dT) / (10000));
-                state = RISING;
+                distance = ((340 * dT) / (10000)); // calculate the distance in mm
+                state = RISING; // Finished so now we go back to looking for a Rising edge
                 break;
 
         }

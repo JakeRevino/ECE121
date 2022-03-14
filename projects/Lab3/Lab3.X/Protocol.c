@@ -46,9 +46,9 @@ static int appFlag;
 static int msgAvail;
 unsigned char currentLENGTH;
 unsigned char currentID;
-char Lab3PL[MAXPAYLOADLENGTH];
+char Lab3PL[65];
 unsigned char ii;
-short weightsPL[MAXPAYLOADLENGTH];
+short weightsPL[32];
 
 unsigned int rc_PL1;
 unsigned int rc_PL2;
@@ -209,10 +209,11 @@ char Protocol_IsError(void) {
 }
 
 unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
-    unsigned char front = (inVariable & 0xFF00) >> 8;
-    unsigned char back = inVariable & 0x00FF;
-    unsigned int result = ((unsigned short) ((back << 8) + front));
-    return result;
+  //  unsigned char front = (inVariable & 0xFF00) >> 8;
+   // unsigned char back = inVariable & 0x00FF;
+  //  unsigned int result = ((unsigned short) ((back << 8) + front));
+    unsigned short outVariable = ((inVariable << 8) & 0xFF00) | ((inVariable >> 8) & 0x00FF);
+    return outVariable;
 
 }
 
@@ -277,7 +278,7 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
             if (packID == ID_LEDS_GET) { // check for special case that has no payload
                 MODE = GET_TAIL;
             } else if ((packID == ID_NVM_WRITE_BYTE) || (packID == ID_NVM_READ_BYTE) || (packID == ID_NVM_WRITE_PAGE) || (packID == ID_NVM_READ_PAGE)
-                    || (packID == ID_ADC_SELECT_CHANNEL) || (packID == ID_ADC_FILTER_VALUES)) {
+                    || (packID == ID_ADC_SELECT_CHANNEL) || (packID == ID_ADC_FILTER_VALUES) || (packID == ID_LAB3_FREQUENCY_ONOFF) || (packID == ID_LAB3_SET_FREQUENCY)) {
                 MODE = LAB3_STATE;
 
             } else {
@@ -387,7 +388,8 @@ void Protocol_RunReceiveStateMachine(unsigned char charIn) {
 
         case LAB3_STATE:
 
-            if ((packID == ID_NVM_WRITE_BYTE) || (packID == ID_NVM_READ_BYTE) || (packID == ID_NVM_WRITE_PAGE) || (packID == ID_NVM_READ_PAGE) || (packID == ID_ADC_SELECT_CHANNEL) || (packID == ID_ADC_FILTER_VALUES)) {
+            if ((packID == ID_NVM_WRITE_BYTE) || (packID == ID_NVM_READ_BYTE) || (packID == ID_NVM_WRITE_PAGE) || (packID == ID_NVM_READ_PAGE) || (packID == ID_ADC_SELECT_CHANNEL) ||
+                    (packID == ID_ADC_FILTER_VALUES) || (packID == ID_LAB3_FREQUENCY_ONOFF) || (packID == ID_LAB3_SET_FREQUENCY)) {
                 Lab3PL[ii] = charIn;
                 weightsPL[ii] = charIn;
                 packCHECKSUM = Protocol_CalcIterativeChecksum(charIn, packCHECKSUM);

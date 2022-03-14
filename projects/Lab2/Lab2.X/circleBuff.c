@@ -70,9 +70,8 @@ unsigned char dequeue_CB(struct CircleBuffer *buff) { // read from CB
 
 void enqueue_Payload(unsigned char *input, unsigned char len, struct CircleBuffer *buff) {
     // want to first check if its empty
-    if (check_FullRX(buff) == 1) {
-        return ERROR;
-    } else {
+    if (check_FullRX(buff) != 1) {
+        //return ERROR;
         memcpy(buff->payloads[buff->RX_tail], input, len);
         buff->payloadLength[buff->RX_tail] = len;
         buff->RX_tail = ((buff->RX_tail + 1) % MAX_BUFFER_LENGTH);

@@ -26,6 +26,7 @@
       <itemPath>circleBuff.c</itemPath>
       <itemPath>ADCFilter.c</itemPath>
       <itemPath>FreeRunningTimer.c</itemPath>
+      <itemPath>Lab3_Application.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
