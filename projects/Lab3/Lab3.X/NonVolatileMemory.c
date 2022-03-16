@@ -161,31 +161,31 @@ int NonVolatileMemory_ReadPage(int page, char length, unsigned char data[]) {
     int address = page * 64;
     I2C1CONbits.SEN = 1; // send START
     while (I2C1CONbits.SEN == 1); // wait for start to finish
-    LEDS_SET(0b10000000);
+    //LEDS_SET(0b10000000);
 
     I2C1TRN = 0b10100000; // send 7-bit slave addy and R/W = 0
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-    LEDS_SET(0b01000000);
+    //LEDS_SET(0b01000000);
     
     unsigned char addressHIGH = ((address >> 8) & 0x7F);
     I2C1TRN = addressHIGH; // send memory address high byte
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-    LEDS_SET(0b00100000);
+   // LEDS_SET(0b00100000);
 
     unsigned char addressLOW = address & 0xFF;
     I2C1TRN = addressLOW; // send memory address low byte
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-    LEDS_SET(0b00010000);
+  //  LEDS_SET(0b00010000);
 
     I2C1CONbits.SEN = 1; // SEND REPEATED START
     while (I2C1CONbits.SEN == 1);
     I2C1TRN = 0b10100001; // send 7-bit slave addy and R/W = 1
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-    LEDS_SET(0b00001000);
+   // LEDS_SET(0b00001000);
 
     for (int i = 0; i < length; i++) {
         I2C1CONbits.RCEN = 1; // enable Rx bit
@@ -206,7 +206,7 @@ int NonVolatileMemory_ReadPage(int page, char length, unsigned char data[]) {
 
     I2C1CONbits.PEN = 1; // initiate stop condition. NACK
     while (I2C1CONbits.PEN == 1); // wait for this to complete
-    LEDS_SET(0b11111111);
+   // LEDS_SET(0b11111111);
     return SUCCESS;
 }
 
@@ -222,25 +222,25 @@ int NonVolatileMemory_WritePage(int page, char length, unsigned char data[]) {
     I2C1CONbits.SEN = 1; // send START
     while (I2C1CONbits.SEN == 1); // wait for start to finish
     // while (I2C1STATbits.);
-     LEDS_SET(0b10000000);
+    // LEDS_SET(0b10000000);
 
     I2C1TRN = 0b10100000; // send 7-bit slave addy and R/W = 0
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     //   I2C1CONbits.ACKEN = 0; // initiate ACK sequence
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-     LEDS_SET(0b10000001);
+    // LEDS_SET(0b10000001);
 
     unsigned char addressHIGH = ((address >> 8) & 0x7F); // get rid of top bits
     I2C1TRN = addressHIGH; // send memory address high byte
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-    LEDS_SET(0b00000011);
+  //  LEDS_SET(0b00000011);
 
     unsigned char addressLOW = address & 0xFF;
     I2C1TRN = addressLOW; // send memory address low byte
     while ((I2C1STATbits.TRSTAT == 1) || (I2C1STATbits.TBF == 1)); // wait for TX to finish
     while (I2C1STATbits.ACKSTAT == 1); // wait for ACK to be received
-    LEDS_SET(0b000000111);
+   // LEDS_SET(0b000000111);
     
     for (int i = 0; i < length;) {
         I2C1TRN = data[i]; // send data to be stored
@@ -252,7 +252,7 @@ int NonVolatileMemory_WritePage(int page, char length, unsigned char data[]) {
 
     I2C1CONbits.PEN = 1; // initiate stop condition. NACK
     while (I2C1CONbits.PEN == 1); // wait for this to complete
-    LEDS_SET(0b11101111);
+   // LEDS_SET(0b11101111);
 
     return SUCCESS;
 

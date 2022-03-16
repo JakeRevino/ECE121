@@ -209,9 +209,9 @@ char Protocol_IsError(void) {
 }
 
 unsigned short Protocol_ShortEndednessConversion(unsigned short inVariable) {
-  //  unsigned char front = (inVariable & 0xFF00) >> 8;
-   // unsigned char back = inVariable & 0x00FF;
-  //  unsigned int result = ((unsigned short) ((back << 8) + front));
+    //  unsigned char front = (inVariable & 0xFF00) >> 8;
+    // unsigned char back = inVariable & 0x00FF;
+    //  unsigned int result = ((unsigned short) ((back << 8) + front));
     unsigned short outVariable = ((inVariable << 8) & 0xFF00) | ((inVariable >> 8) & 0x00FF);
     return outVariable;
 

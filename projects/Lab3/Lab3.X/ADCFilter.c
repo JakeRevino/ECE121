@@ -47,14 +47,22 @@ int ADCFilter_Init(void) {
     }
 
     // STEP 1: connect desired pins to ADC
-    TRISBbits.TRISB2 = 1; // A0, AN2, RB2
-    TRISBbits.TRISB4 = 1; // A1, AN4, RB4
-    TRISBbits.TRISB8 = 1; // A2, AN8, RB8
-    TRISBbits.TRISB10 = 1; // A3, AN10, RB10
-    AD1PCFG = 0xFAEB;
+//    TRISBbits.TRISB2 = 1; // A0, AN2, RB2
+//    TRISBbits.TRISB4 = 1; // A1, AN4, RB4
+//    TRISBbits.TRISB8 = 1; // A2, AN8, RB8
+//    TRISBbits.TRISB10 = 1; // A3, AN10, RB10
+    //AD1PCFG = 0xFAEB;
+    AD1PCFGbits.PCFG2 = 0;
+    AD1PCFGbits.PCFG4 = 0;
+    AD1PCFGbits.PCFG8 = 0;
+    AD1PCFGbits.PCFG10 = 0;
 
     // STEP 2: connect same pins to scanner (.CSSL)
-    AD1CSSL = 0x0541; // this selects AN2, AN4, AN8, and AN10 for input scan 
+   // AD1CSSL = 0x0541; // this selects AN2, AN4, AN8, and AN10 for input scan 
+    AD1CSSLbits.CSSL2 = 1;
+    AD1CSSLbits.CSSL4 = 1;
+    AD1CSSLbits.CSSL8 = 1;
+    AD1CSSLbits.CSSL10 = 1;
 
     // STEP 3:
     AD1CON1bits.ASAM = 1; // AUTO-SAMPLE. Sampling begins immediately after last conversion completes; SAMP bit is automatically set
@@ -64,7 +72,7 @@ int ADCFilter_Init(void) {
     // STEP 4: 
     AD1CON2bits.VCFG = 0b000; // internal voltage as reference (AVdd & AVss)
     AD1CON2bits.CSCNA = 1; // scan inputs. SCAN MODE
-    AD1CON2bits.SMPI = 0b0000; // Interrupts at the completion of conversion for each sample/convert sequence
+    AD1CON2bits.SMPI = 0b0011; // Interrupts at the completion of conversion for each sample/convert sequence
 
     // STEP 5:
     AD1CON2bits.BUFM = 0; // Buffer configured as one 16-word buffer
@@ -126,7 +134,7 @@ short ADCFilter_ApplyFilter(short filter[], short values[], short startIndex) {
             startIndex = 31;
         }
     }
-    short result = sum >> 15;
+    short result = (sum >> 15) & 0xFFFF;
     return result;
 }
 
@@ -199,9 +207,9 @@ int main(void) {
                 //                    newFilterVal[index] = ((Lab3PL[j] << 8) | (Lab3PL[j + 1]));
                 //                    j = j + 2;
                 //                }
-                //                for (int i = 0; i < 32; i++) {
-                //                    newFilterVal[i] = Protocol_ShortEndednessConversion(newFilterVal[i]);
-                //                }
+                //                                for (int i = 0; i < 32; i++) {
+                //                                    newFilterVal[i] = Protocol_ShortEndednessConversion(newFilterVal[i]);
+                //                                }
 
                 // Protocol_SendMessage(sizeof (newFilterVal) + 1, ID_ADC_FILTER_VALUES_RESP, &newFilterVal);
                 //  Protocol_SendMessage(sizeof(weightsPL), ID_ADC_FILTER_VALUES_RESP, &weightsPL);
@@ -211,12 +219,23 @@ int main(void) {
                 //                }
                 if (Lab3PL[0] == -1) {
                     ADCFilter_SetWeights(currentChannel, LowPass);
+                    for (int i = 0; i < 32; i++) {
+                        LowPass[i] = Protocol_ShortEndednessConversion(LowPass[i]);
+                    }
                     Protocol_SendMessage(sizeof (LowPass) + 1, ID_ADC_FILTER_VALUES_RESP, &LowPass);
+
                 } else if (Lab3PL[1] == 0) {
                     ADCFilter_SetWeights(currentChannel, HighPass);
+                    for (int i = 0; i < 32; i++) {
+                        HighPass[i] = Protocol_ShortEndednessConversion(HighPass[i]);
+                    }
                     Protocol_SendMessage(sizeof (HighPass) + 1, ID_ADC_FILTER_VALUES_RESP, &HighPass);
+
                 } else if (Lab3PL[1] == 73) {
                     ADCFilter_SetWeights(currentChannel, BandPass);
+                    for (int i = 0; i < 32; i++) {
+                        BandPass[i] = Protocol_ShortEndednessConversion(BandPass[i]);
+                    }
                     Protocol_SendMessage(sizeof (BandPass) + 1, ID_ADC_FILTER_VALUES_RESP, &BandPass);
                 }
 
@@ -238,28 +257,15 @@ int main(void) {
         currentMilli = FreeRunningTimer_GetMilliSeconds();
 
         if ((currentMilli - previousMilli) >= 10) {
-            //            ADCReading.rawReading = Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
-            //            ADCReading.filterReading = Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
-            //            ReturnBuffer[0] = (ADCReading.rawReading << 8) & 0xFF;
-            //            ReturnBuffer[1] = (ADCReading.rawReading) & 0xFF;
-            //            ReturnBuffer[2] = (ADCReading.filterReading << 8) & 0xFF;
-            //            ReturnBuffer[3] = (ADCReading.filterReading) & 0xFF;
             //ReturnBuffer[0] = ADCFilter_RawReading(currentChannel);
             ReturnBuffer[0] = Protocol_ShortEndednessConversion(ADCFilter_RawReading(currentChannel));
             //ReturnBuffer[1] = ADCFilter_FilteredReading(currentChannel);
             ReturnBuffer[1] = Protocol_ShortEndednessConversion(ADCFilter_FilteredReading(currentChannel));
             Protocol_SendMessage(5, ID_ADC_READING, &ReturnBuffer);
-            //            for (int n = 0; n < 100; n++) {
-            //                asm("nop");
-            //            }
+
             previousMilli = currentMilli;
-
         }
-
     }
-    // 0XCC 41 94 FFCA FFC0 FFAE FF9F FFA3 FFD1 0042 010A 0232 03B7 0584 0775 095C 0B05 0C40 0CE8 0CE8 0C40 0B05 095C 0775 0584 03B7 0232 010A 0042 FFD1 FFA3 FF9F FFAE FFC0 FFCA B9 90 0D0A
-    // 0X         FFCAFFC0FFAEFF9FFFA3FFD10042010A023203B705840775095C0B050C400CE80CE80C400B05095C0775058403B70232010A0042FFD1FFA3FF9FFFAEFFC0FFCA
-
     return 0;
     while (1);
     BOARD_End();
