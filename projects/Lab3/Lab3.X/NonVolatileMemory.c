@@ -196,11 +196,11 @@ int NonVolatileMemory_ReadPage(int page, char length, unsigned char data[]) {
         if (i < length - 1) {
             I2C1CONbits.ACKDT = 0; // initiate ACK
             I2C1CONbits.ACKEN = 1; // initiate ACK sequence
-            while (I2C1CONbits.ACKEN == 1); // wait for Rx to finish
+            while (I2C1STATbits.ACKSTAT == 1); // wait for Rx to finish
         } else {
             I2C1CONbits.ACKDT = 1; // initiate NACK
             I2C1CONbits.ACKEN = 1; // initiate ACK sequence
-            while (I2C1CONbits.ACKEN == 1); // wait for Rx to finish
+            while (I2C1STATbits.ACKSTAT == 1); // wait for Rx to finish
         }
     }
 
