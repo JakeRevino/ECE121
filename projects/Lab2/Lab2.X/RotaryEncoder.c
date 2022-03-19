@@ -127,6 +127,6 @@ int main(void) {
         }
     }
 
-    /* get fucked */
+   
 }
 #endif
